@@ -5,5 +5,5 @@ A repository to store the code required to implemented the TCP "congestion proto
 Data used:
 - CIFAR 10
 
-Mode used:
+Model used:
 - ResNet18
