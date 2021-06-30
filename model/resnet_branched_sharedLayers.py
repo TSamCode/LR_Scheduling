@@ -172,6 +172,28 @@ class ResNetSplitShared(nn.Module):
         return nn.Sequential(*layers)
 
 
+    def get_branch_params(self):
+
+        self.shared_params = [
+                        {'params': self.conv1.parameters()},
+                        {'params': self.bn1.parameters()},
+                         {'params': self.layer1.parameters()},
+                         {'params': self.layer2.parameters()},
+        ]
+        self.branch1_params = [
+                        {'params': self.branch1layer3.parameters()},
+                        {'params': self.branch1layer4.parameters()},
+                         {'params': self.branch1fc.parameters()},
+        ]
+        self.branch2_params = [
+                        {'params': self.branch2layer3.parameters()},
+                        {'params': self.branch2layer4.parameters()},
+                         {'params': self.branch2fc.parameters()},
+        ]
+
+        return self.shared_params, self.branch1_params, self.branch2_params
+
+
     def _forward_shared_branch(self, x:Tensor) -> Tensor:
         out = self.conv1(x)
         out = self.bn1(out)
