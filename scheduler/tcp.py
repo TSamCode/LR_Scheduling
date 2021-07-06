@@ -1,23 +1,3 @@
-
-def get_branch_params(model):
-
-    shared_params = []
-    branch1_params = []
-    branch2_params = []
-
-    params = model.state_dict()
-
-    for key, value in params.items():
-        if 'branch1' in str(key):
-            branch1_params.append(params[key])
-        elif 'branch2' in str(key):
-            branch2_params.append(params[key])
-        else:
-            shared_params.append(params[key])
-
-    return shared_params, branch1_params, branch2_params
-
-
 def congestion_control_scheduler(decay_factor, mult_factor, branch1_optim, branch2_optim, branch1_acc, branch2_acc, condition):
     '''
     A function to take the current optimizers for the ResNet model branches.
@@ -68,9 +48,6 @@ def congestion_scheduler(epoch, min_epoch, decay_factor, mult_factor, max_lr, sh
     '''
 
     import math
-
-    lr_1 = branch1_optim.param_groups[0]['lr']
-    lr_2 = branch2_optim.param_groups[0]['lr']
 
     branch1_cond = branch1_acc < condition * branch2_acc
     branch2_cond = branch2_acc < condition * branch1_acc
