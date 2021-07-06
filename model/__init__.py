@@ -1,5 +1,2 @@
-from model.cnn_blocks import BasicBlock, Bottleneck, conv1x1, conv3x3
-from model.resnet import ResNet
-from model.resnet_branched import ResNetSplit, ResNetSplit18
-from model.resnet_branched_sharedLayers import ResNetSplitShared, ResNetSplit18Shared
-from model.processing import get_branch_params
+from create_data.import_data import create_CIFAR_data
+from create_data.data_processing import get_binary_label, create_unbalanced_CIFAR10
