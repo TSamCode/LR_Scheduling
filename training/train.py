@@ -64,9 +64,7 @@ def train_congestion_avoider(trainloader, device, model, optimizer, branch_one_c
                     else:
                         branch_one_grads[name] += torch.mul(copy.deepcopy(parameter.grad), optimizer.param_groups[0]['lr'])
                 except:
-                    print('ERROR: ', name)
-                    print('Grads: ', branch_one_grads[name])
-                    print('Current grad: ', copy.deepcopy(parameter.grad))
+                    pass
         model.zero_grad()
 
         branch_two_loss.backward(retain_graph=True)
@@ -78,9 +76,7 @@ def train_congestion_avoider(trainloader, device, model, optimizer, branch_one_c
                     else:
                         branch_two_grads[name] += torch.mul(copy.deepcopy(parameter.grad), optimizer.param_groups[0]['lr'])
                 except:
-                    print('ERROR: ', name)
-                    print('Grads: ', branch_two_grads[name], )
-                    print('Current grad: ', copy.deepcopy(parameter.grad))
+                    pass
         model.zero_grad()
 
         total_loss = branch_one_loss + branch_two_loss

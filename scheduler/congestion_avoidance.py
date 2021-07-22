@@ -12,8 +12,6 @@ def congestion_avoid(model, optimizer, branch1_acc, branch2_acc, condition, bran
 
     global epoch_count_one
     global epoch_count_two
-    #global lr_one_cumulative
-    #global lr_two_cumulative
 
     boolean_one = False
     boolean_two = False
@@ -22,11 +20,12 @@ def congestion_avoid(model, optimizer, branch1_acc, branch2_acc, condition, bran
     branch2_cond = (branch2_acc < condition * branch1_acc) and (epoch_count_one >= min_epochs)
 
     if branch1_cond:
-        booelan_one = True
+        boolean_one = True
         print('Branch 1 condition has been met .....')
         for name, value in model.named_parameters():
             with torch.no_grad():
-                value += mult * branch_two_grads[name]
+                if name in branch_two_grads.keys():
+                    value += mult * branch_two_grads[name]
         epoch_count_two = 0
         #lr_two_cumulative = 0
 
@@ -35,7 +34,8 @@ def congestion_avoid(model, optimizer, branch1_acc, branch2_acc, condition, bran
         print('Branch 2 condition has been met .....')
         for name, value in model.named_parameters():
             with torch.no_grad():
-                value += mult * branch_one_grads[name]
+                if name in branch_one_grads.keys():
+                    value += mult * branch_one_grads[name]
         epoch_count_one = 0
         #lr_one_cumulative = 0
     
@@ -61,14 +61,16 @@ def congestion_avoid_weights(model, optimizer, branch1_acc, branch2_acc, conditi
         print('Branch 1 condition has been met .....')
         for name, value in model.named_parameters():
             with torch.no_grad():
-                value -= mult * branch_two_weight_update[name]
+                if name in branch_two_weight_update.keys():
+                    value -= mult * branch_two_weight_update[name]
 
     elif branch2_cond:
         boolean_two = True
         print('Branch 2 condition has been met .....')
         for name, value in model.named_parameters():
             with torch.no_grad():
-                value -= mult * branch_one_weight_update[name]
+                if name in branch_one_weight_update.keys():
+                    value -= mult * branch_one_weight_update[name]
     
     else:
         print('No condition is met .....')
