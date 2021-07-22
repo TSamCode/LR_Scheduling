@@ -61,7 +61,7 @@ def get_cong_avoidance_results(branch_one_class=3, branch_two_class=5, epochs=10
     for epoch in range(epochs):
         print('\n********** EPOCH {} **********'.format(epoch + 1))
         print('Learning rate: ', optimizer.param_groups[0]['lr'])
-        branch_one_train_acc, branch_two_train_acc, branch_one_grads, branch_two_grads = train_congestion_avoider(trainloader, model, optimizer, branch_one_criterion, branch_two_criterion, branch_one_class, branch_two_class, boolean_one, boolean_two)
+        branch_one_train_acc, branch_two_train_acc, branch_one_grads, branch_two_grads = train_congestion_avoider(trainloader, device, model, optimizer, branch_one_criterion, branch_two_criterion, branch_one_class, branch_two_class, boolean_one, boolean_two)
         #print('\nBRANCH ONE GRADS:')
         #for key, value in branch_one_grads.items():
         #    print(key, torch.sum(value))
@@ -158,3 +158,7 @@ def get_cong_avoidance_weight_results(branch_one_class=3, branch_two_class=5, ep
         branch_two_condition.append(boolean_two)
 
     return branch_one_train_accuracies, branch_two_train_accuracies, branch_one_test_accuracies, branch_two_test_accuracies, branch_one_condition, branch_two_condition
+
+
+if __name__ == '__main__':
+    get_cong_avoidance_results(branch_one_class=3, branch_two_class=5, epochs=1, min_cond=0.95, max_cond = 0.99, mult_factor=1, lr=0.1, min_epochs = 5)
