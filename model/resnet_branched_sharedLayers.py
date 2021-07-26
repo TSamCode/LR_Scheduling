@@ -7,7 +7,11 @@ from torch import Tensor
 from typing import Type, Any, Callable, Union, List, Optional
 
 class ResNetSplitShared(nn.Module):
-    ''' https://stackoverflow.com/questions/66786787/pytorch-multiple-branches-of-a-model '''
+    '''
+    Inspiration taken from PyTorch discussion forum:
+    https://discuss.pytorch.org/t/how-to-train-the-network-with-multiple-branches/2152
+    (website accessed 26th July 2021)
+    '''
 
     def __init__(self, block: Type[Union[BasicBlock, Bottleneck]], layers: List[int], num_classes: int = 10, zero_init_residual: bool = False, groups: int = 1, width_per_group: int = 64, replace_stride_with_dilation: Optional[List[bool]] = None, norm_layer: Optional[Callable[..., nn.Module]] = None) -> None:
         super(ResNetSplitShared, self).__init__()
