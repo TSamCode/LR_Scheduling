@@ -14,7 +14,11 @@ def get_binary_label(targets, index):
 
 
 def create_unbalanced_CIFAR10(trainset, class_sizes = [625,625,625,5000,625,5000,625,625,625,625]):
-
+  '''
+  Inspiration taken from PyTorch discussion blog: 
+  https://discuss.pytorch.org/t/how-to-implement-oversampling-in-cifar-10/16964/6
+  (Site accessed on 26th July 2021)
+  '''
 
   labels = np.array(trainset.targets)
   classes, sizes = np.unique(labels, return_counts=True)
