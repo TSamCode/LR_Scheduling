@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+import random
 
 def get_binary_label(targets, index):
     ''' Cats have index 3, dogs have index 5 '''
@@ -14,19 +15,22 @@ def get_binary_label(targets, index):
 
 def create_unbalanced_CIFAR10(trainset, class_sizes = [625,625,625,5000,625,5000,625,625,625,625]):
 
+
   labels = np.array(trainset.targets)
-  classes, count = np.unique(labels, return_counts=True)
-  num_classes = len(classes)
-  print(count)
+  classes, sizes = np.unique(labels, return_counts=True)
+  print(sizes)
 
-  indices = [np.where(labels == i)[0] for i in range(num_classes)]
+  imbalanced_indices = []
 
-  imbalanced_indices = [idx[:class_count] for idx, class_count in zip(indices, class_sizes)]
-  imbalanced_indices = np.hstack(imbalanced_indices)
+  for i in range(len(classes)):
+    indices = list(np.where(labels == i)[0])
+    class_size = class_sizes[i]
+    imbalanced_indices.extend(random.sample(indices, class_size))
+
+
   trainset.targets = labels[imbalanced_indices]
   trainset.data = trainset.data[imbalanced_indices]
-
-  classes, count = np.unique(trainset.targets, return_counts=True)
-  print(count)
+  classes, sizes = np.unique(trainset.targets, return_counts=True)
+  print(sizes)
 
   return trainset
