@@ -13,6 +13,23 @@ def get_binary_label(targets, index):
     return labels
 
 
+def get_branch_indices(targets, classes):
+
+  bg = []
+  indices = list(range(len(targets)))
+  for index, target in enumerate(targets):
+    if target not in classes:
+      bg.append(index)
+
+  branch_one_bg = random.sample(bg, int(len(bg) / 2))
+  branch_two_bg = [x for x in bg if x not in branch_one_bg]
+
+  branch_one_idx = [x for x in indices if x not in branch_two_bg]
+  branch_two_idx = [x for x in indices if x not in branch_one_bg]
+
+  return torch.tensor(branch_one_idx), torch.tensor(branch_two_idx)
+
+
 def create_unbalanced_CIFAR10(trainset, class_sizes = [625,625,625,5000,625,5000,625,625,625,625]):
   '''
   Inspiration taken from PyTorch discussion blog: 
