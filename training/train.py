@@ -1,7 +1,7 @@
 import time
 import torch
 from torch.optim.optimizer import Optimizer
-from create_data import get_binary_label
+from create_data import get_binary_label, get_branch_indices
 
 
 def train_congestion_avoider_archive(trainloader, device, model, optimizer, branch_one_criterion, branch_two_criterion, branch_one_class, branch_two_class, boolean_one, boolean_two):
@@ -261,9 +261,19 @@ def train_congestion_avoider_no_reset(trainloader, device, model, optimizer, bra
     for batch_idx, (inputs, targets) in enumerate(trainloader):
         branch_one_targets = get_binary_label(targets, index=branch_one_class)
         branch_two_targets = get_binary_label(targets, index=branch_two_class)
-        inputs, branch_one_targets, branch_two_targets = inputs.to(device), branch_one_targets.to(device), branch_two_targets.to(device)
+        
+        branch_one_idx, branch_two_idx = get_branch_indices(targets, classes=[branch_one_class, branch_two_class])
+        branch_one_inputs = torch.index_select(inputs, 0, branch_one_idx)
+        branch_one_targets = torch.index_select(branch_one_targets, 0, branch_one_idx)
+        branch_two_inputs = torch.index_select(inputs, 0, branch_two_idx)
+        branch_two_targets = torch.index_select(branch_two_targets, 0, branch_two_idx)
+        
+        branch_one_inputs, branch_two_inputs, branch_one_targets, branch_two_targets = branch_one_inputs.to(device), branch_two_inputs.to(device), branch_one_targets.to(device), branch_two_targets.to(device)
         optimizer.zero_grad()
-        branch_one_outputs, branch_two_outputs = model(inputs)
+        
+        branch_one_outputs, _ = model(branch_one_inputs)
+        _, branch_two_outputs = model(branch_two_inputs)
+
         branch_one_loss = branch_one_criterion(branch_one_outputs, branch_one_targets)
         branch_two_loss = branch_two_criterion(branch_two_outputs, branch_two_targets)
         
