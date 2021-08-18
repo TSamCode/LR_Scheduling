@@ -92,6 +92,15 @@ def test_congestion_avoider_no_reset(start_time, testloader, device, model, opti
     branch_two_correct = 0
     branch_one_total = 0
     branch_two_total = 0
+    branch_one_TP = 0
+    branch_one_FP = 0
+    branch_one_TN = 0
+    branch_one_FN = 0
+    branch_two_TP = 0
+    branch_two_FP = 0
+    branch_two_TN = 0
+    branch_two_FN = 0
+
     with torch.no_grad():
         for batch_idx, (inputs, targets) in enumerate(testloader):
             branch_one_targets = get_binary_label(targets, index=branch_one_class)
@@ -110,19 +119,75 @@ def test_congestion_avoider_no_reset(start_time, testloader, device, model, opti
             branch_one_correct += branch_one_predicted.eq(branch_one_targets).sum().item()
             branch_two_correct += branch_two_predicted.eq(branch_two_targets).sum().item()
 
-        branch_one_val_acc = branch_one_correct / branch_one_total
-        branch_two_val_acc = branch_two_correct / branch_two_total
+            for target, pred in zip(branch_one_targets, branch_one_predicted):
+                if target == 0:
+                    if pred == 0:
+                        branch_one_TN += 1
+                    else:
+                        branch_one_FP += 1
+                elif target == 1:
+                    if pred == 1:
+                        branch_one_TP += 1
+                    else:
+                        branch_one_FN += 1
+        
+            for target, pred in zip(branch_two_targets, branch_two_predicted):
+                if target == 0:
+                    if pred == 0:
+                        branch_two_TN += 1
+                    else:
+                        branch_two_FP += 1
+                elif target == 1:
+                    if pred == 1:
+                        branch_two_TP += 1
+                    else:
+                        branch_two_FN += 1
+
+        branch_one_val_acc = 100.*branch_one_correct/branch_one_total
+        
+        if branch_one_TP + branch_one_FP > 0:
+            branch_one_precision = 100.*branch_one_TP/(branch_one_TP + branch_one_FP)
+        else:
+            branch_one_precision = 0
+        if branch_one_TP + branch_one_FN > 0:
+            branch_one_recall = 100.*branch_one_TP/(branch_one_TP + branch_one_FN)
+        else:
+            branch_one_recall = 0
+        
+        branch_two_val_acc = 100.*branch_two_correct/branch_two_total
+        
+        if branch_two_TP + branch_two_FP > 0:
+            branch_two_precision = 100.*branch_two_TP/(branch_two_TP + branch_two_FP)
+        else:
+            branch_two_precision = 0
+        if branch_two_TP + branch_two_FN > 0:
+            branch_two_recall = 100.*branch_two_TP/(branch_two_TP + branch_two_FN)
+        else:
+            branch_two_recall = 0
+
+        try:
+            branch_one_F = 2 * branch_one_precision * branch_one_recall / (branch_one_precision + branch_one_recall)
+        except:
+            branch_one_F = 0
+        try:
+            branch_two_F = 2 * branch_two_precision * branch_two_recall / (branch_two_precision + branch_two_recall)
+        except:
+            branch_two_F = 0
 
         condition = linear_cong_condition(min_cond, max_cond, epoch, max_epochs)
 
-        optimizer, model, boolean_one, boolean_two, branch_one_grads, branch_two_grads = congestion_avoid_no_reset(model, optimizer, branch_one_val_acc, branch_two_val_acc, condition, branch_one_grads, branch_two_grads, min_epochs, mult)
+        optimizer, model, boolean_one, boolean_two, branch_one_grads, branch_two_grads = congestion_avoid(model, optimizer, branch_one_precision, branch_two_precision, condition, branch_one_grads, branch_two_grads, min_epochs, mult)
         scheduler.step()
 
         print("total test iters ", len(testloader), '| time: %.3f sec Cat Loss: %.3f | Cat Acc: %.3f%% (%d/%d) | Dog Loss: %.3f | Dog Acc: %.3f%% (%d/%d)'
         % ((time.time()-start_time), branch_one_test_loss/(batch_idx+1), 
-           100.*branch_one_correct/branch_one_total, branch_one_correct, branch_one_total, 
-           branch_two_test_loss/(batch_idx+1), 100.*branch_two_correct/branch_two_total, 
-           branch_two_correct, branch_two_total))
+        100.*branch_one_correct/branch_one_total, branch_one_correct, branch_one_total, 
+        branch_two_test_loss/(batch_idx+1), 100.*branch_two_correct/branch_two_total, 
+        branch_two_correct, branch_two_total))
+        
+        print('Cat P: : %.3f%% (%d/%d) | Dog P: %.3f%% (%d/%d)'%(branch_one_precision, branch_one_TP, branch_one_TP + branch_one_FP, branch_two_precision, branch_two_TP, branch_two_TP + branch_two_FP))
+        print('Cat R: : %.3f%% (%d/%d) | Dog R: %.3f%% (%d/%d)'%(branch_one_recall, branch_one_TP, branch_one_TP + branch_one_FN, branch_two_recall, branch_two_TP, branch_two_TP + branch_two_FN))
+        print('Cat F: : %.3f%%         | Dog R: %.3f%%'%(branch_one_F, branch_two_F))
 
     # RE-EVALUATE THE MODEL ON THE TEST SET AFTER THE WEIGHTS HAVE BEEN UPDATED
     model.eval()
@@ -152,12 +217,12 @@ def test_congestion_avoider_no_reset(start_time, testloader, device, model, opti
 
         print("total test iters ", len(testloader), '| time: %.3f sec Cat Loss: %.3f | Cat Acc: %.3f%% (%d/%d) | Dog Loss: %.3f | Dog Acc: %.3f%% (%d/%d)'
         % ((time.time()-start_time), branch_one_test_loss/(batch_idx+1), 
-           100.*branch_one_correct/branch_one_total, branch_one_correct, branch_one_total, 
-           branch_two_test_loss/(batch_idx+1), 100.*branch_two_correct/branch_two_total, 
-           branch_two_correct, branch_two_total))
+        100.*branch_one_correct/branch_one_total, branch_one_correct, branch_one_total, 
+        branch_two_test_loss/(batch_idx+1), 100.*branch_two_correct/branch_two_total, 
+        branch_two_correct, branch_two_total))
 
 
-    return optimizer, branch_one_val_acc, branch_two_val_acc, boolean_one, boolean_two, branch_one_grads, branch_two_grads
+    return optimizer, branch_one_val_acc, branch_two_val_acc, branch_one_precision, branch_two_precision, branch_one_recall, branch_two_recall, branch_one_F, branch_two_F, boolean_one, boolean_two, branch_one_grads, branch_two_grads
 
 
 def test_congestion_avoider_weights(start_time, testloader, device, model, optimizer, scheduler, branch_one_weight_update, branch_two_weight_update, branch_one_class, branch_two_class, branch_one_criterion, branch_two_criterion, epoch, max_epochs, min_cond, max_cond, min_epochs, mult):

@@ -159,4 +159,4 @@ class ResNetSplit(nn.Module):
 
 
 def ResNetSplit18():
-    return ResNetSplit(BasicBlock, [2,2,2,2])
+    return ResNetSplit(BasicBlock, [2,2,2,2], num_classes=2)
