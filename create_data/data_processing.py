@@ -55,3 +55,31 @@ def create_unbalanced_CIFAR10(trainset, class_sizes = [625,625,625,5000,625,5000
   print(sizes)
 
   return trainset
+
+
+def create_unbalanced_CIFAR100(trainset, class_sizes = {3:500, 37:500}):
+
+  labels = np.array(trainset.targets)
+  classes, sizes = np.unique(labels, return_counts=True)
+  print(sizes)
+
+  imbalanced_indices = []
+
+  for i in range(len(classes)):
+    if i in class_sizes.keys():
+      indices = list(np.where(labels == i)[0])
+      class_size = class_sizes[i]
+      imbalanced_indices.extend(random.sample(indices, class_size))
+  
+  keys = list(class_sizes.keys())
+  
+  bg_indices = list(np.where(np.logical_and(labels != keys[0],labels != keys[1]))[0])
+  imbalanced_indices.extend(random.sample(bg_indices, 500))
+
+  
+  trainset.targets = labels[imbalanced_indices]
+  trainset.data = trainset.data[imbalanced_indices]
+  classes, sizes = np.unique(trainset.targets, return_counts=True)
+  print(sizes)
+
+  return trainset
