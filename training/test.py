@@ -1,3 +1,4 @@
+import numpy as np
 import time
 import torch
 from create_data import get_binary_label
@@ -266,3 +267,68 @@ def test_congestion_avoider_weights(start_time, testloader, device, model, optim
            branch_two_correct, branch_two_total))
 
     return optimizer, branch_one_val_acc, branch_two_val_acc, boolean_one, boolean_two
+
+
+def test_congestion_avoider_10classes(start_time, testloaders, device, model, optimizer, scheduler, grads, criterion, epoch, max_epochs, min_cond, max_cond, min_epochs, mult, epoch_counts):
+
+    ''' 
+        XXXX
+    '''
+
+    import copy
+
+    model.eval()
+    cls_num = len(testloaders)
+    confusion_matrix = np.zeros((cls_num, cls_num))
+    accuracies = np.zeros((10))
+    recalls = np.zeros((10))
+    precisions = np.zeros((10))
+    fScores = np.zeros((10))
+    boolean_values = np.zeros((10))
+    
+    with torch.no_grad():
+        for cls_num, testloader in enumerate(testloaders):
+            for batch_idx, (inputs, targets) in enumerate(testloader):
+                inputs = inputs.to(device)
+                targets = targets.to(device)
+            
+                outputs = model(inputs)
+                loss = criterion(outputs,targets)
+                _, predicted = outputs.max(1)
+
+                for target, pred in zip(targets, predicted):
+                    confusion_matrix[target][pred] += 1
+    
+        for cls in range(cls_num):
+            try:
+                accuracies[cls] = confusion_matrix[cls][cls] / confusion_matrix.sum() 
+            except:
+                accuracies[cls] = 0
+            try:
+                recalls[cls] = confusion_matrix[cls][cls] / confusion_matrix.sum(0)[cls]
+            except:
+                recalls[cls] = 0
+            try:
+                precisions[cls] = confusion_matrix[cls][cls] / confusion_matrix.sum(1)[cls]
+            except:
+                precisions[cls] = 0
+            try:
+                fScores[cls] = 2 * precisions[cls] * recalls[cls] / (precisions[cls] + recalls[cls])
+            except:
+                fScores[cls] = 0
+
+        condition = linear_cong_condition(min_cond, max_cond, epoch, max_epochs)
+        # ADD CONGESTION AVOIDANCE STRATEGY HERE !!!
+        scheduler.step()
+
+        print('time: %.3f sec'% ((time.time()-start_time)))
+        print(confusion_matrix)
+        for cls in range(cls_num):
+            print('Class %d A: : %.3f%% (%d/%d)'%(cls, 100*accuracies[cls], confusion_matrix[cls][cls], confusion_matrix.sum()))
+            print('Class %d P: : %.3f%% (%d/%d)'%(cls, 100*precisions[cls], confusion_matrix[cls][cls], confusion_matrix.sum(1)[cls]))
+            print('Class %d R: : %.3f%% (%d/%d)'%(cls, 100*recalls[cls], confusion_matrix[cls][cls], confusion_matrix.sum(0)[cls]))
+            print('Class %d F: : %.3f%%'%(cls, 100*fScores[cls]))
+            print('********************')
+
+
+    return optimizer, accuracies, precisions, recalls, fScores, boolean_values, grads, epoch_counts

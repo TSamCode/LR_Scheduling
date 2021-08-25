@@ -689,27 +689,11 @@ def train_congestion_avoider_weights(trainloader, model, optimizer, branch_one_c
 #booelan_values = [False]*10
 #grads = [{},{},{},{},{},{},{},{},{},{}]
 
-def train_congestion_avoider_10classes(trainloaders, device, model, optimizer, criteria, boolean_values, grads):
+def train_congestion_avoider_10classes(trainloaders, device, model, optimizer, criterion, boolean_values, grads, epoch_counts):
 
     ''' 
-        XXXX
+        Function to train ResNet model on ten classes of images, each class of images is passed to the model in turn
     '''
-
-    global epoch_count_one
-    global epoch_count_two
-    global epoch_count_three
-    global epoch_count_four
-    global epoch_count_five
-    global epoch_count_six
-    global epoch_count_seven
-    global epoch_count_eight
-    global epoch_count_nine
-    global epoch_count_ten
-
-    epoch_counts = [epoch_count_one, epoch_count_two, epoch_count_three,
-              epoch_count_four, epoch_count_five, epoch_count_six, 
-              epoch_count_seven, epoch_count_eight, epoch_count_nine, 
-              epoch_count_ten]
 
     import copy
 
@@ -718,10 +702,6 @@ def train_congestion_avoider_10classes(trainloaders, device, model, optimizer, c
 
     cls_num = len(trainloaders)
     confusion_matrix = np.zeros((cls_num, cls_num))
-    accuracies = [0]*10
-    precisions = [0]*10
-    recalls = [0]*10
-    fScores = [0]*10
 
     for epoch_count, boolean in zip(epoch_counts, boolean_values):
         if boolean:
@@ -734,7 +714,7 @@ def train_congestion_avoider_10classes(trainloaders, device, model, optimizer, c
             optimizer.zero_grad()
         
             outputs = model(inputs)
-            loss = criteria[cls_num](outputs,targets)
+            loss = criterion(outputs,targets)
         
             # Back-propagate the loss due to 'cats'
             loss.backward(retain_graph=True)
@@ -752,15 +732,32 @@ def train_congestion_avoider_10classes(trainloaders, device, model, optimizer, c
             _, predicted = outputs.max(1)
 
             for target, pred in zip(targets, predicted):
-                confusion_matrix[target][predicted] += 1
-    
+                confusion_matrix[target][pred] += 1
+
+    accuracies = np.zeros((10))
+    recalls = np.zeros((10))
+    precisions = np.zeros((10))
+    fScores = np.zeros((10))
+
+    for epoch_count in epoch_counts:
+      epoch_count += 1
+
     for cls in range(cls_num):
-        accuracies[cls] = confusion_matrix[cls][cls] / confusion_matrix.sum()
-        recalls[cls] = confusion_matrix[cls][cls] / confusion_matrix.sum(0)[cls]
-        precisions[cls] = confusion_matrix[cls][cls] / confusion_matrix.sum(1)[cls]
+        try:
+            accuracies[cls] = confusion_matrix[cls][cls] / confusion_matrix.sum() 
+        except:
+            accuracies[cls] = 0
+        try:
+            recalls[cls] = confusion_matrix[cls][cls] / confusion_matrix.sum(0)[cls]
+        except:
+            recalls[cls] = 0
+        try:
+            precisions[cls] = confusion_matrix[cls][cls] / confusion_matrix.sum(1)[cls]
+        except:
+            precisions[cls] = 0
         try:
             fScores[cls] = 2 * precisions[cls] * recalls[cls] / (precisions[cls] + recalls[cls])
         except:
             fScores[cls] = 0
 
-    return accuracies, precisions, recalls, fScores, grads
+    return confusion_matrix, accuracies, recalls, precisions, fScores, grads, epoch_counts

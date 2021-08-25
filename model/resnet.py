@@ -122,3 +122,7 @@ class ResNet(nn.Module):
 
     def forward(self, x: Tensor) -> Tensor:
         return self._forward_impl(x)
+
+
+def ResNet18():
+    return ResNet(BasicBlock, [2,2,2,2], num_classes=2)

@@ -1,14 +1,14 @@
-from training import train_congestion_avoider, test_congestion_avoider, train_congestion_avoider_weights, test_congestion_avoider_weights, train_congestion_avoider_no_reset, test_congestion_avoider_no_reset
+from training import train_congestion_avoider, test_congestion_avoider, train_congestion_avoider_weights, test_congestion_avoider_weights, train_congestion_avoider_no_reset, test_congestion_avoider_no_reset, train_congestion_avoider_10classes, test_congestion_avoider_10classes
 from create_data import create_unbalanced_CIFAR10
 import time
 import torch
-
+import numpy as np
 import torch.nn as nn
 import torch.optim as optim
 import torch.backends.cudnn as cudnn
 from torch.optim.lr_scheduler import CyclicLR
-from model import ResNetSplit18Shared
-from create_data import create_CIFAR_data
+from model import ResNetSplit18Shared, ResNet18
+from create_data import create_CIFAR_data, create_sampled_CIFAR10_data, create_class_subsets
 
 
 def get_cong_avoidance_results(branch_one_class=3, branch_two_class=5, epochs=100, min_cond=0.95, max_cond = 0.99, mult_factor=1, lr=0.1, min_epochs = 5):
@@ -267,6 +267,68 @@ def get_cong_avoidance_weight_results(branch_one_class=3, branch_two_class=5, ep
         branch_two_condition.append(boolean_two)
 
     return branch_one_train_accuracies, branch_two_train_accuracies, branch_one_test_accuracies, branch_two_test_accuracies, branch_one_condition, branch_two_condition
+
+
+def get_cong_avoidance_results_10classes(epochs=100, min_cond=0.95, max_cond = 0.99, mult=1, lr=0.1, min_epochs = 5):
+
+    '''Allow the congestion condition to change linearly over time '''
+
+    # Create ResNet model
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    model = ResNet18()
+    model = model.to(device)
+    if device == 'cuda':
+        print('CUDA device used...')
+        model = torch.nn.DataParallel(model)
+        cudnn.benchmark = True
+
+    # Import data
+    trainset, trainloader, testset, testloader = create_sampled_CIFAR10_data()
+    trainsets, trainloaders = create_class_subsets(trainset, shuffle=True, batch_size=128)
+    testsets, testloaders = create_class_subsets(testset, shuffle=False, batch_size=100)
+
+    # Create variables
+    cls_num = len(trainset.classes)
+    boolean_values = [False]*cls_num
+    grads = [{}]*cls_num
+    epoch_counts = [0]*cls_num
+    
+    criterion = nn.CrossEntropyLoss()
+    # CREATE MODEL OPTIMIZER
+    optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0, weight_decay=5e-4)
+    scheduler = CyclicLR(optimizer, base_lr=0.0001, max_lr=lr, step_size_up=10, mode="triangular2")
+
+    # BEGIN RECORDING THE TIME
+    start_time = time.time()
+
+    # Create matrices to store results
+
+    train_acc = np.zeros((epochs, cls_num))
+    train_P = np.zeros((epochs, cls_num))
+    train_R = np.zeros((epochs, cls_num))
+    train_F = np.zeros((epochs, cls_num))
+    test_acc = np.zeros((epochs, cls_num))
+    test_P = np.zeros((epochs, cls_num))
+    test_R = np.zeros((epochs, cls_num))
+    test_F = np.zeros((epochs, cls_num))
+    cong_events = np.zeros((epochs, cls_num))
+
+    for epoch in range(epochs):
+        print('\n********** EPOCH {} **********'.format(epoch + 1))
+        print('Learning rate: ', optimizer.param_groups[0]['lr'])
+        confusion_matrix, accuracies, recalls, precisions, fScores, grads, epoch_counts = train_congestion_avoider_10classes(trainloaders, device, model, optimizer, criterion, boolean_values, grads, epoch_counts)
+        train_acc[epoch] = accuracies
+        train_P[epoch] = precisions
+        train_R[epoch] = recalls
+        train_F[epoch] = fScores
+        optimizer, accuracies, precisions, recalls, fScores, boolean_values, grads, epoch_counts = test_congestion_avoider_10classes(start_time, testloaders, device, model, optimizer, scheduler, grads, criterion, epoch, epochs, min_cond, max_cond, min_epochs, mult, epoch_counts)
+        test_acc[epoch] = accuracies
+        test_P[epoch] = precisions
+        test_R[epoch] = recalls
+        test_F[epoch] = fScores
+        cong_events[epoch] = boolean_values
+
+    return train_acc, train_P, train_R, train_F, test_acc, test_P, test_R, test_F, cong_events
 
 
 if __name__ == '__main__':

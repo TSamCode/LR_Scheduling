@@ -1,4 +1,4 @@
 from training.test_model import test_branches, test_TCP_branches
 from training.train_model import train_branches, train_TCP_branches
-from training.train import train_congestion_avoider, train_congestion_avoider_weights, train_congestion_avoider_no_reset
-from training.test import test_congestion_avoider, test_congestion_avoider_weights, test_congestion_avoider_no_reset
+from training.train import train_congestion_avoider, train_congestion_avoider_weights, train_congestion_avoider_no_reset, train_congestion_avoider_10classes
+from training.test import test_congestion_avoider, test_congestion_avoider_weights, test_congestion_avoider_no_reset, test_congestion_avoider_10classes
