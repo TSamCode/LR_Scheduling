@@ -85,7 +85,7 @@ def create_unbalanced_CIFAR100(trainset, class_sizes = {3:500, 37:500}):
   return trainset
 
 
-def create_class_subsets(trainset):
+def create_class_subsets(trainset, shuffle=True, batch_size=128):
     
     labels = np.array(trainset.targets)
     
@@ -100,4 +100,15 @@ def create_class_subsets(trainset):
     trainset_8 = torch.utils.data.Subset(trainset, list(np.where(labels == 8)[0]))
     trainset_9 = torch.utils.data.Subset(trainset, list(np.where(labels == 9)[0]))
 
-    return trainset_0, trainset_1, trainset_2, trainset_3, trainset_4, trainset_5, trainset_6, trainset_7, trainset_8, trainset_9
+    trainloader_0 = torch.utils.data.DataLoader(trainset_0, batch_size=batch_size, shuffle=shuffle, num_workers=2)
+    trainloader_1 = torch.utils.data.DataLoader(trainset_1, batch_size=batch_size, shuffle=shuffle, num_workers=2)
+    trainloader_2 = torch.utils.data.DataLoader(trainset_2, batch_size=batch_size, shuffle=shuffle, num_workers=2)
+    trainloader_3 = torch.utils.data.DataLoader(trainset_3, batch_size=batch_size, shuffle=shuffle, num_workers=2)
+    trainloader_4 = torch.utils.data.DataLoader(trainset_4, batch_size=batch_size, shuffle=shuffle, num_workers=2)
+    trainloader_5 = torch.utils.data.DataLoader(trainset_5, batch_size=batch_size, shuffle=shuffle, num_workers=2)
+    trainloader_6 = torch.utils.data.DataLoader(trainset_6, batch_size=batch_size, shuffle=shuffle, num_workers=2)
+    trainloader_7 = torch.utils.data.DataLoader(trainset_7, batch_size=batch_size, shuffle=shuffle, num_workers=2)
+    trainloader_8 = torch.utils.data.DataLoader(trainset_8, batch_size=batch_size, shuffle=shuffle, num_workers=2)
+    trainloader_9 = torch.utils.data.DataLoader(trainset_9, batch_size=batch_size, shuffle=shuffle, num_workers=2)
+
+    return trainset_0, trainset_1, trainset_2, trainset_3, trainset_4, trainset_5, trainset_6, trainset_7, trainset_8, trainset_9, trainloader_0, trainloader_1, trainloader_2, trainloader_3, trainloader_4, trainloader_5, trainloader_6, trainloader_7, trainloader_8, trainloader_9
