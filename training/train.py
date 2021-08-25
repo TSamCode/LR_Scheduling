@@ -1,4 +1,5 @@
 import time
+import numpy as np
 import torch
 from torch.optim.optimizer import Optimizer
 from create_data import get_binary_label, get_branch_indices
@@ -681,3 +682,85 @@ def train_congestion_avoider_weights(trainloader, model, optimizer, branch_one_c
            branch_two_correct, branch_two_total))
 
     return branch_one_acc, branch_two_acc, branch_one_weight_update, branch_two_weight_update
+
+
+#model = ResNet(BasicBlock, [2,2,2,2], 10)
+#trainloaders = [trainloader_0, trainloader_1, trainloader_2, trainloader_3, trainloader_4, trainloader_5, trainloader_6, trainloader_7, trainloader_8, trainloader_9]
+#booelan_values = [False]*10
+#grads = [{},{},{},{},{},{},{},{},{},{}]
+
+def train_congestion_avoider_10classes(trainloaders, device, model, optimizer, criteria, boolean_values, grads):
+
+    ''' 
+        XXXX
+    '''
+
+    global epoch_count_one
+    global epoch_count_two
+    global epoch_count_three
+    global epoch_count_four
+    global epoch_count_five
+    global epoch_count_six
+    global epoch_count_seven
+    global epoch_count_eight
+    global epoch_count_nine
+    global epoch_count_ten
+
+    epoch_counts = [epoch_count_one, epoch_count_two, epoch_count_three,
+              epoch_count_four, epoch_count_five, epoch_count_six, 
+              epoch_count_seven, epoch_count_eight, epoch_count_nine, 
+              epoch_count_ten]
+
+    import copy
+
+    model.train()
+    start_time = time.time()
+
+    cls_num = len(trainloaders)
+    confusion_matrix = np.zeros((cls_num, cls_num))
+    accuracies = [0]*10
+    precisions = [0]*10
+    recalls = [0]*10
+    fScores = [0]*10
+
+    for epoch_count, boolean in zip(epoch_counts, boolean_values):
+        if boolean:
+            epoch_count = 0
+    
+    for cls_num, trainloader in enumerate(trainloaders):
+        for batch_idx, (inputs, targets) in enumerate(trainloader):
+            inputs = inputs.to(device)
+            targets = targets.to(device)
+            optimizer.zero_grad()
+        
+            outputs = model(inputs)
+            loss = criteria[cls_num](outputs,targets)
+        
+            # Back-propagate the loss due to 'cats'
+            loss.backward(retain_graph=True)
+            with torch.no_grad():
+                for name, parameter in model.named_parameters():
+                  try:
+                      if name not in grads[cls_num].keys():
+                          grads[cls_num][name] = torch.mul(copy.deepcopy(parameter.grad), optimizer.param_groups[0]['lr'])
+                      else:
+                          grads[cls_num][name] += torch.mul(copy.deepcopy(parameter.grad), optimizer.param_groups[0]['lr'])
+                  except:
+                      pass
+            optimizer.step()
+
+            _, predicted = outputs.max(1)
+
+            for target, pred in zip(targets, predicted):
+                confusion_matrix[target][predicted] += 1
+    
+    for cls in range(cls_num):
+        accuracies[cls] = confusion_matrix[cls][cls] / confusion_matrix.sum()
+        recalls[cls] = confusion_matrix[cls][cls] / confusion_matrix.sum(0)[cls]
+        precisions[cls] = confusion_matrix[cls][cls] / confusion_matrix.sum(1)[cls]
+        try:
+            fScores[cls] = 2 * precisions[cls] * recalls[cls] / (precisions[cls] + recalls[cls])
+        except:
+            fScores[cls] = 0
+
+    return accuracies, precisions, recalls, fScores, grads
