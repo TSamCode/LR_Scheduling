@@ -83,3 +83,21 @@ def create_unbalanced_CIFAR100(trainset, class_sizes = {3:500, 37:500}):
   print(sizes)
 
   return trainset
+
+
+def create_class_subsets(trainset):
+    
+    labels = np.array(trainset.targets)
+    
+    trainset_0 = torch.utils.data.Subset(trainset, list(np.where(labels == 0)[0]))
+    trainset_1 = torch.utils.data.Subset(trainset, list(np.where(labels == 1)[0]))
+    trainset_2 = torch.utils.data.Subset(trainset, list(np.where(labels == 2)[0]))
+    trainset_3 = torch.utils.data.Subset(trainset, list(np.where(labels == 3)[0]))
+    trainset_4 = torch.utils.data.Subset(trainset, list(np.where(labels == 4)[0]))
+    trainset_5 = torch.utils.data.Subset(trainset, list(np.where(labels == 5)[0]))
+    trainset_6 = torch.utils.data.Subset(trainset, list(np.where(labels == 6)[0]))
+    trainset_7 = torch.utils.data.Subset(trainset, list(np.where(labels == 7)[0]))
+    trainset_8 = torch.utils.data.Subset(trainset, list(np.where(labels == 8)[0]))
+    trainset_9 = torch.utils.data.Subset(trainset, list(np.where(labels == 9)[0]))
+
+    return trainset_0, trainset_1, trainset_2, trainset_3, trainset_4, trainset_5, trainset_6, trainset_7, trainset_8, trainset_9
