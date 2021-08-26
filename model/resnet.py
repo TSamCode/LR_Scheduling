@@ -1,11 +1,10 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from model import conv1x1, BasicBlock, Bottleneck
 
 from torch import Tensor
 from typing import Type, Any, Callable, Union, List, Optional
-
-from model import conv1x1, BasicBlock, Bottleneck
 
 class ResNet(nn.Module):
     '''

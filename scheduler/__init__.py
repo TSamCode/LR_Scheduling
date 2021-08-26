@@ -1,2 +1,1 @@
-from scheduler.tcp import congestion_scheduler
-from scheduler.congestion_avoidance import congestion_avoid, congestion_avoid_weights, linear_cong_condition, congestion_avoid_no_reset
+from scheduler.congestion_avoidance import congestion_avoid, linear_cong_condition
