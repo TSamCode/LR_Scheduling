@@ -2,7 +2,7 @@ import numpy as np
 import time
 import torch
 from create_data import get_binary_label
-from scheduler import congestion_avoid, linear_cong_condition
+from scheduler import congestion_avoid, linear_cong_condition, congestion_avoid_10classes
 
 
 def test_congestion_avoider(start_time, testloader, device, model, optimizer, scheduler, branch_one_grads, branch_two_grads, branch_one_class, branch_two_class, branch_one_criterion, branch_two_criterion, epoch, max_epochs, min_cond, max_cond, min_epochs, mult):
@@ -197,7 +197,7 @@ def test_congestion_avoider_10classes(start_time, testloaders, device, model, op
                 fScores[cls] = 0
 
         condition = linear_cong_condition(min_cond, max_cond, epoch, max_epochs)
-        # ADD CONGESTION AVOIDANCE STRATEGY HERE !!!
+        optimizer, model, boolean_values, epoch_counts, grads = congestion_avoid_10classes(model, optimizer, precisions, condition, grads, min_epochs, mult, epoch_counts, boolean_values)
         scheduler.step()
 
         print('time: %.3f sec'% ((time.time()-start_time)))

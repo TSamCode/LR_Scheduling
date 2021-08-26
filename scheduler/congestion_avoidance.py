@@ -45,3 +45,26 @@ def congestion_avoid(model, optimizer, branch1_metric, branch2_metric, condition
         print('No condition is met ..... {:.2f}%'.format(100.*condition))
 
     return optimizer, model, boolean_one, boolean_two, branch_one_grads, branch_two_grads
+
+
+def congestion_avoid_10classes(model, optimizer, metrics, condition, grads, min_epochs, mult, epoch_counts, boolean_values):
+
+    cls_num = len(grads)
+
+    for cls in cls_num:
+        metric = metrics[cls]
+        if any(other_metric < condition * metric for other_metric in metrics):
+            boolean_values[cls] = True
+            print('Condition has been met ..... {:.2f}%'.format(100.*condition))
+            for name, value in model.named_parameters():
+                with torch.no_grad():
+                    if name in grads[cls].keys():
+                        value += mult * grads[cls][name]
+            for name in grads[cls].keys():
+                grads[cls][name] -= mult * grads[cls][name]
+            epoch_counts[cls_num] = 0
+    
+    else:
+        print('No condition is met ..... {:.2f}%'.format(100.*condition))
+
+    return optimizer, model, boolean_values, epoch_counts, grads
