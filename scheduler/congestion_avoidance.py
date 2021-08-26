@@ -51,7 +51,7 @@ def congestion_avoid_10classes(model, optimizer, metrics, condition, grads, min_
 
     cls_num = len(grads)
 
-    for cls in cls_num:
+    for cls in range(cls_num):
         metric = metrics[cls]
         if any(other_metric < condition * metric for other_metric in metrics):
             boolean_values[cls] = True
