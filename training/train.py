@@ -182,7 +182,7 @@ def train_congestion_avoider(trainloader, device, model, optimizer, branch_one_c
     return branch_one_acc, branch_two_acc, branch_one_precision, branch_two_precision, branch_one_recall, branch_two_recall, branch_one_F, branch_two_F, branch_one_grads, branch_two_grads
 
 
-def train_congestion_avoider_10classes(trainloaders, device, model, optimizer, criterion, boolean_values, grads, epoch_counts):
+def train_congestion_avoider_10classes(trainloader_full, trainloaders, device, model, optimizer, criterion, boolean_values, grads, epoch_counts):
 
     ''' 
         Function to train ResNet model on ten classes of images, each class of images is passed to the model in turn
@@ -200,6 +200,7 @@ def train_congestion_avoider_10classes(trainloaders, device, model, optimizer, c
         if boolean:
             epoch_count = 0
     
+    # Run through each class data subset in turn and store their gradient
     for cls_num, trainloader in enumerate(trainloaders):
         for batch_idx, (inputs, targets) in enumerate(trainloader):
             inputs = inputs.to(device)
@@ -209,8 +210,7 @@ def train_congestion_avoider_10classes(trainloaders, device, model, optimizer, c
             outputs = model(inputs)
             loss = criterion(outputs,targets)
         
-            # Back-propagate the loss due to 'cats'
-            loss.backward(retain_graph=True)
+            loss.backward(retain_graph=False)
             with torch.no_grad():
                 for name, parameter in model.named_parameters():
                   try:
@@ -226,6 +226,22 @@ def train_congestion_avoider_10classes(trainloaders, device, model, optimizer, c
 
             for target, pred in zip(targets, predicted):
                 confusion_matrix[target][pred] += 1
+
+    # Then update the weights by running through the full shuffled dataset
+    # Using the class subsets would be ordered training data which is not good practice
+    for batch_idx, (inputs, targets) in enumerate(trainloader_full):
+        inputs = inputs.to(device)
+        targets = targets.to(device)
+        outputs = model(inputs)
+        optimizer.zero_grad()
+        loss = criterion(outputs,targets)
+        loss.backward(retain_graph=True)
+        optimizer.step()
+
+        _, predicted = outputs.max(1)
+
+        for target, pred in zip(targets, predicted):
+            confusion_matrix[target][pred] += 1
 
     accuracies = np.zeros((10))
     recalls = np.zeros((10))
