@@ -133,12 +133,12 @@ def get_cong_avoidance_results_10classes(epochs=100, min_cond=0.95, max_cond = 0
         cudnn.benchmark = True
 
     # Import data
-    trainset, trainloader, testset, testloader = create_sampled_CIFAR10_data()
-    trainsets, trainloaders = create_class_subsets(trainset, shuffle=True, batch_size=128)
-    testsets, testloaders = create_class_subsets(testset, shuffle=False, batch_size=100)
+    trainset_full, trainloader_full, testset_full, testloader_full = create_sampled_CIFAR10_data()
+    trainsets, trainloaders = create_class_subsets(trainset_full, shuffle=True, batch_size=128)
+    testsets, testloaders = create_class_subsets(testset_full, shuffle=False, batch_size=100)
 
     # Create variables
-    cls_num = len(trainset.classes)
+    cls_num = len(trainset_full.classes)
     boolean_values = [False]*cls_num
     grads = [{}]*cls_num
     epoch_counts = [0]*cls_num
@@ -153,11 +153,11 @@ def get_cong_avoidance_results_10classes(epochs=100, min_cond=0.95, max_cond = 0
 
     # Create matrices to store results
 
-    train_acc = np.zeros((epochs, cls_num))
+    train_acc = np.zeros((epochs, 1))
     train_P = np.zeros((epochs, cls_num))
     train_R = np.zeros((epochs, cls_num))
     train_F = np.zeros((epochs, cls_num))
-    test_acc = np.zeros((epochs, cls_num))
+    test_acc = np.zeros((epochs, 1))
     test_P = np.zeros((epochs, cls_num))
     test_R = np.zeros((epochs, cls_num))
     test_F = np.zeros((epochs, cls_num))
@@ -166,13 +166,13 @@ def get_cong_avoidance_results_10classes(epochs=100, min_cond=0.95, max_cond = 0
     for epoch in range(epochs):
         print('\n********** EPOCH {} **********'.format(epoch + 1))
         print('Learning rate: ', optimizer.param_groups[0]['lr'])
-        confusion_matrix, accuracies, recalls, precisions, fScores, grads, epoch_counts = train_congestion_avoider_10classes(trainloaders, device, model, optimizer, criterion, boolean_values, grads, epoch_counts)
-        train_acc[epoch] = accuracies
+        confusion_matrix, accuracy, recalls, precisions, fScores, grads, epoch_counts = train_congestion_avoider_10classes(trainloader_full, trainloaders, device, model, optimizer, criterion, boolean_values, grads, epoch_counts)
+        train_acc[epoch] = accuracy
         train_P[epoch] = precisions
         train_R[epoch] = recalls
         train_F[epoch] = fScores
-        optimizer, accuracies, precisions, recalls, fScores, boolean_values, grads, epoch_counts = test_congestion_avoider_10classes(start_time, testloaders, device, model, optimizer, scheduler, grads, criterion, epoch, epochs, min_cond, max_cond, min_epochs, mult, epoch_counts)
-        test_acc[epoch] = accuracies
+        optimizer, accuracy, precisions, recalls, fScores, boolean_values, grads, epoch_counts = test_congestion_avoider_10classes(start_time, testloaders, device, model, optimizer, scheduler, grads, criterion, epoch, epochs, min_cond, max_cond, min_epochs, mult, epoch_counts)
+        test_acc[epoch] = accuracy
         test_P[epoch] = precisions
         test_R[epoch] = recalls
         test_F[epoch] = fScores

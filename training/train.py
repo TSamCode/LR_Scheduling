@@ -243,7 +243,6 @@ def train_congestion_avoider_10classes(trainloader_full, trainloaders, device, m
         for target, pred in zip(targets, predicted):
             confusion_matrix[target][pred] += 1
 
-    accuracies = np.zeros((10))
     recalls = np.zeros((10))
     precisions = np.zeros((10))
     fScores = np.zeros((10))
@@ -252,10 +251,6 @@ def train_congestion_avoider_10classes(trainloader_full, trainloaders, device, m
       epoch_count += 1
 
     for cls in range(cls_num):
-        if confusion_matrix.sum() != 0:
-            accuracies[cls] = confusion_matrix[cls][cls] / confusion_matrix.sum() 
-        else:
-            accuracies[cls] = 0
         if confusion_matrix.sum(1)[cls] != 0:
             recalls[cls] = confusion_matrix[cls][cls] / confusion_matrix.sum(1)[cls]
         else:
@@ -269,4 +264,6 @@ def train_congestion_avoider_10classes(trainloader_full, trainloaders, device, m
         else:
             fScores[cls] = 0
 
-    return confusion_matrix, accuracies, recalls, precisions, fScores, grads, epoch_counts
+    accuracy = np.trace(confusion_matrix) / confusion_matrix.sum()
+
+    return confusion_matrix, accuracy, recalls, precisions, fScores, grads, epoch_counts
