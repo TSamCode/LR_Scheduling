@@ -236,21 +236,21 @@ def train_congestion_avoider_10classes(trainloaders, device, model, optimizer, c
       epoch_count += 1
 
     for cls in range(cls_num):
-        try:
+        if confusion_matrix.sum() != 0:
             accuracies[cls] = confusion_matrix[cls][cls] / confusion_matrix.sum() 
-        except:
+        else:
             accuracies[cls] = 0
-        try:
-            recalls[cls] = confusion_matrix[cls][cls] / confusion_matrix.sum(0)[cls]
-        except:
+        if confusion_matrix.sum(1)[cls] != 0:
+            recalls[cls] = confusion_matrix[cls][cls] / confusion_matrix.sum(1)[cls]
+        else:
             recalls[cls] = 0
-        try:
-            precisions[cls] = confusion_matrix[cls][cls] / confusion_matrix.sum(1)[cls]
-        except:
+        if confusion_matrix.sum(0)[cls] != 0:
+            precisions[cls] = confusion_matrix[cls][cls] / confusion_matrix.sum(0)[cls]
+        else:
             precisions[cls] = 0
-        try:
+        if (precisions[cls] + recalls[cls]) != 0:
             fScores[cls] = 2 * precisions[cls] * recalls[cls] / (precisions[cls] + recalls[cls])
-        except:
+        else:
             fScores[cls] = 0
 
     return confusion_matrix, accuracies, recalls, precisions, fScores, grads, epoch_counts

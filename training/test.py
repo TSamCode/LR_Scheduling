@@ -179,21 +179,21 @@ def test_congestion_avoider_10classes(start_time, testloaders, device, model, op
                     confusion_matrix[target][pred] += 1
     
         for cls in range(cls_num):
-            try:
+            if confusion_matrix.sum() != 0:
                 accuracies[cls] = confusion_matrix[cls][cls] / confusion_matrix.sum() 
-            except:
+            else:
                 accuracies[cls] = 0
-            try:
-                recalls[cls] = confusion_matrix[cls][cls] / confusion_matrix.sum(0)[cls]
-            except:
+            if confusion_matrix.sum(1)[cls] != 0:
+                recalls[cls] = confusion_matrix[cls][cls] / confusion_matrix.sum(1)[cls]
+            else:
                 recalls[cls] = 0
-            try:
-                precisions[cls] = confusion_matrix[cls][cls] / confusion_matrix.sum(1)[cls]
-            except:
+            if confusion_matrix.sum(0)[cls] != 0:
+                precisions[cls] = confusion_matrix[cls][cls] / confusion_matrix.sum(0)[cls]
+            else:
                 precisions[cls] = 0
-            try:
+            if (precisions[cls] + recalls[cls]) != 0:
                 fScores[cls] = 2 * precisions[cls] * recalls[cls] / (precisions[cls] + recalls[cls])
-            except:
+            else:
                 fScores[cls] = 0
 
         condition = linear_cong_condition(min_cond, max_cond, epoch, max_epochs)
