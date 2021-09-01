@@ -1,2 +1,2 @@
 from create_data.import_data import create_CIFAR_data, IMBALANCECIFAR10, create_sampled_CIFAR10_data
-from create_data.data_processing import get_binary_label, create_unbalanced_CIFAR10, get_branch_indices, create_class_subsets
+from create_data.data_processing import get_binary_label, create_unbalanced_CIFAR10, get_branch_indices

@@ -3,6 +3,7 @@ import numpy as np
 import torch
 from torch.optim.optimizer import Optimizer
 from create_data import get_binary_label, get_branch_indices
+import copy
 
 
 def train_congestion_avoider(trainloader, device, model, optimizer, branch_one_criterion, branch_two_criterion, branch_one_class, branch_two_class, boolean_one, boolean_two, branch_one_grads, branch_two_grads):
@@ -182,18 +183,15 @@ def train_congestion_avoider(trainloader, device, model, optimizer, branch_one_c
     return branch_one_acc, branch_two_acc, branch_one_precision, branch_two_precision, branch_one_recall, branch_two_recall, branch_one_F, branch_two_F, branch_one_grads, branch_two_grads
 
 
-def train_congestion_avoider_10classes(trainloader_full, trainloaders, device, model, optimizer, criterion, boolean_values, grads, epoch_counts):
+def train_congestion_avoider_10classes_archive(cls_num, trainloader_full, trainloaders, device, model, optimizer, criterion, boolean_values, grads, epoch_counts):
 
     ''' 
         Function to train ResNet model on ten classes of images, each class of images is passed to the model in turn
     '''
 
-    import copy
-
     model.train()
     start_time = time.time()
 
-    cls_num = len(trainloaders)
     confusion_matrix = np.zeros((cls_num, cls_num))
 
     for epoch_count, boolean in zip(epoch_counts, boolean_values):
@@ -201,7 +199,7 @@ def train_congestion_avoider_10classes(trainloader_full, trainloaders, device, m
             epoch_count = 0
     
     # Run through each class data subset in turn and store their gradient
-    for cls_num, trainloader in enumerate(trainloaders):
+    for cls, trainloader in enumerate(trainloaders):
         for batch_idx, (inputs, targets) in enumerate(trainloader):
             inputs = inputs.to(device)
             targets = targets.to(device)
@@ -214,10 +212,10 @@ def train_congestion_avoider_10classes(trainloader_full, trainloaders, device, m
             with torch.no_grad():
                 for name, parameter in model.named_parameters():
                   try:
-                      if name not in grads[cls_num].keys():
-                          grads[cls_num][name] = torch.mul(copy.deepcopy(parameter.grad), optimizer.param_groups[0]['lr'])
+                      if name not in grads[cls].keys():
+                          grads[cls][name] = torch.mul(copy.deepcopy(parameter.grad), optimizer.param_groups[0]['lr'])
                       else:
-                          grads[cls_num][name] += torch.mul(copy.deepcopy(parameter.grad), optimizer.param_groups[0]['lr'])
+                          grads[cls][name] += torch.mul(copy.deepcopy(parameter.grad), optimizer.param_groups[0]['lr'])
                   except:
                       pass
             optimizer.step()
@@ -247,8 +245,7 @@ def train_congestion_avoider_10classes(trainloader_full, trainloaders, device, m
     precisions = np.zeros((10))
     fScores = np.zeros((10))
 
-    for epoch_count in epoch_counts:
-      epoch_count += 1
+    epoch_counts = [x+1 for x in epoch_counts]
 
     for cls in range(cls_num):
         if confusion_matrix.sum(1)[cls] != 0:
@@ -267,3 +264,72 @@ def train_congestion_avoider_10classes(trainloader_full, trainloaders, device, m
     accuracy = np.trace(confusion_matrix) / confusion_matrix.sum()
 
     return confusion_matrix, accuracy, recalls, precisions, fScores, grads, epoch_counts
+
+
+def train_congestion_avoider_10_classes(device, model, trainloader, criterion, optimizer, cls_num, epoch_counts, boolean_values, grads):
+
+  model.train()
+  start_time = time.time()
+
+  confusion_matrix = np.zeros((cls_num, cls_num))
+
+  for epoch_count, boolean in zip(epoch_counts, boolean_values):
+      if boolean:
+          epoch_count = 0
+  
+  #input, target = next(iter(trainloader))
+  #for inputs, targets in zip([input], [target]):
+  for batch_idx, (inputs, targets) in enumerate(trainloader):
+    inputs = inputs.to(device)
+    targets = targets.to(device)
+    optimizer.zero_grad()
+    outputs = model(inputs)
+    loss = criterion(outputs,targets)
+
+    masks = [targets == k for k in range(cls_num)]
+    sub_losses = [loss[mask].mean() for mask in masks]
+    
+    for name,param in model.named_parameters():
+        param.grad = None
+
+    for cls, sub_loss in enumerate(sub_losses):
+      sub_loss.backward(retain_graph=True)
+      for name,param in model.named_parameters():
+        if name in grads[cls].keys():
+          grads[cls][name] += torch.mul(copy.deepcopy(param.grad), optimizer.param_groups[0]['lr'])
+        else:
+          grads[cls][name] = torch.mul(copy.deepcopy(param.grad), optimizer.param_groups[0]['lr'])
+        param.grad=None
+    
+    optimizer.zero_grad()
+    loss.mean().backward()  
+    optimizer.step()
+
+    _, predicted = outputs.max(1)
+
+    for target, pred in zip(targets, predicted):
+        confusion_matrix[target][pred] += 1
+
+  recalls = np.zeros((cls_num))
+  precisions = np.zeros((cls_num))
+  fScores = np.zeros((cls_num))
+
+  epoch_counts = [x+1 for x in epoch_counts]
+
+  for cls in range(cls_num):
+      if confusion_matrix.sum(1)[cls] != 0:
+          recalls[cls] = confusion_matrix[cls][cls] / confusion_matrix.sum(1)[cls]
+      else:
+          recalls[cls] = 0
+      if confusion_matrix.sum(0)[cls] != 0:
+          precisions[cls] = confusion_matrix[cls][cls] / confusion_matrix.sum(0)[cls]
+      else:
+          precisions[cls] = 0
+      if (precisions[cls] + recalls[cls]) != 0:
+          fScores[cls] = 2 * precisions[cls] * recalls[cls] / (precisions[cls] + recalls[cls])
+      else:
+          fScores[cls] = 0
+
+  accuracy = np.trace(confusion_matrix) / confusion_matrix.sum()
+
+  return confusion_matrix, accuracy, recalls, precisions, fScores, grads, epoch_counts

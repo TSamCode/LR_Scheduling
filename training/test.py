@@ -3,6 +3,7 @@ import time
 import torch
 from create_data import get_binary_label
 from scheduler import congestion_avoid, linear_cong_condition, congestion_avoid_10classes
+import copy
 
 
 def test_congestion_avoider(start_time, testloader, device, model, optimizer, scheduler, branch_one_grads, branch_two_grads, branch_one_class, branch_two_class, branch_one_criterion, branch_two_criterion, epoch, max_epochs, min_cond, max_cond, min_epochs, mult):
@@ -148,34 +149,33 @@ def test_congestion_avoider(start_time, testloader, device, model, optimizer, sc
     return optimizer, branch_one_val_acc, branch_two_val_acc, branch_one_precision, branch_two_precision, branch_one_recall, branch_two_recall, branch_one_F, branch_two_F, boolean_one, boolean_two, branch_one_grads, branch_two_grads
 
 
-def test_congestion_avoider_10classes(start_time, testloaders, device, model, optimizer, scheduler, grads, criterion, epoch, max_epochs, min_cond, max_cond, min_epochs, mult, epoch_counts):
+def test_congestion_avoider_10classes(cls_num, start_time, testloader, device, model, optimizer, scheduler, grads, criterion, epoch, max_epochs, min_cond, max_cond, min_epochs, mult, epoch_counts, num_class_avg, min_gradient):
 
     ''' 
-        XXXX
+        Inclusion of congestion avoidance strategy within the test function
     '''
 
     import copy
 
+    print('Classes in test function: ', cls_num)
+
     model.eval()
-    cls_num = len(testloaders)
     confusion_matrix = np.zeros((cls_num, cls_num))
-    recalls = np.zeros((10))
-    precisions = np.zeros((10))
-    fScores = np.zeros((10))
-    boolean_values = np.zeros((10))
+    recalls = np.zeros((cls_num))
+    precisions = np.zeros((cls_num))
+    fScores = np.zeros((cls_num))
+    boolean_values = np.zeros((cls_num))
     
     with torch.no_grad():
-        for cls_num, testloader in enumerate(testloaders):
-            for batch_idx, (inputs, targets) in enumerate(testloader):
-                inputs = inputs.to(device)
-                targets = targets.to(device)
-            
-                outputs = model(inputs)
-                loss = criterion(outputs,targets)
-                _, predicted = outputs.max(1)
+        for batch_idx, (inputs, targets) in enumerate(testloader):
+            inputs = inputs.to(device)
+            targets = targets.to(device)
+            outputs = model(inputs)
+            loss = criterion(outputs,targets)
+            _, predicted = outputs.max(1)
 
-                for target, pred in zip(targets, predicted):
-                    confusion_matrix[target][pred] += 1
+            for target, pred in zip(targets, predicted):
+                confusion_matrix[target][pred] += 1
     
         for cls in range(cls_num):
             if confusion_matrix.sum(1)[cls] != 0:
@@ -194,17 +194,19 @@ def test_congestion_avoider_10classes(start_time, testloaders, device, model, op
         accuracy = np.trace(confusion_matrix) / confusion_matrix.sum()
 
         condition = linear_cong_condition(min_cond, max_cond, epoch, max_epochs)
-        optimizer, model, boolean_values, epoch_counts, grads = congestion_avoid_10classes(model, optimizer, precisions, condition, grads, min_epochs, mult, epoch_counts, boolean_values)
+        
+        optimizer, model, boolean_values, epoch_counts, grads = congestion_avoid_10classes(cls_num, model, optimizer, fScores, condition, grads, min_epochs, mult, epoch_counts, boolean_values, num_class_avg, min_gradient)
         scheduler.step()
 
-        print('time: %.3f sec'% ((time.time()-start_time)))
-        print(confusion_matrix)
-        for cls in range(cls_num):
-            print('Class %d A: : %.3f%% (%d/%d)'%(cls, 100*accuracy, np.trace(confusion_matrix), confusion_matrix.sum()))
-            print('Class %d P: : %.3f%% (%d/%d)'%(cls, 100*precisions[cls], confusion_matrix[cls][cls], confusion_matrix.sum(1)[cls]))
-            print('Class %d R: : %.3f%% (%d/%d)'%(cls, 100*recalls[cls], confusion_matrix[cls][cls], confusion_matrix.sum(0)[cls]))
-            print('Class %d F: : %.3f%%'%(cls, 100*fScores[cls]))
-            print('********************')
+    print('time: %.3f sec'% ((time.time()-start_time)))
+    print('Rows: Actual, Columns: Predicted')
+    print(confusion_matrix)
+    for cls in range(cls_num):
+        print('Class %d A: : %.3f%% (%d/%d)'%(cls, 100*accuracy, np.trace(confusion_matrix), confusion_matrix.sum()))
+        print('Class %d P: : %.3f%% (%d/%d)'%(cls, 100*precisions[cls], confusion_matrix[cls][cls], confusion_matrix.sum(0)[cls]))
+        print('Class %d R: : %.3f%% (%d/%d)'%(cls, 100*recalls[cls], confusion_matrix[cls][cls], confusion_matrix.sum(1)[cls]))
+        print('Class %d F: : %.3f%%'%(cls, 100*fScores[cls]))
+        print('********************')
 
 
     return optimizer, accuracy, precisions, recalls, fScores, boolean_values, grads, epoch_counts
