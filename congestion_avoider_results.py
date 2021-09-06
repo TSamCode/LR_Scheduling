@@ -1,4 +1,4 @@
-from training import train_congestion_avoider, test_congestion_avoider, train_congestion_avoider_10_classes, test_congestion_avoider_10classes
+from training import train_congestion_avoider, test_congestion_avoider, train_congestion_avoider_10_classes, test_congestion_avoider_10classes, test_congestion_avoider_10classes_cosine
 from create_data import create_unbalanced_CIFAR10, create_CIFAR_data, create_sampled_CIFAR10_data
 import time
 import torch
@@ -172,6 +172,69 @@ def get_cong_avoidance_results_10classes(epochs=100, min_cond=0.95, max_cond = 0
         train_R[epoch] = recalls
         train_F[epoch] = fScores
         optimizer, accuracy, precisions, recalls, fScores, boolean_values, grads, epoch_counts = test_congestion_avoider_10classes(cls_num, start_time, testloader, device, model, optimizer, scheduler, grads, criterion, epoch, epochs, min_cond, max_cond, min_epochs, mult, epoch_counts, num_class_avg, min_gradient)
+        test_acc[epoch] = accuracy
+        test_P[epoch] = precisions
+        test_R[epoch] = recalls
+        test_F[epoch] = fScores
+        cong_events[epoch] = boolean_values
+
+    return train_acc, train_P, train_R, train_F, test_acc, test_P, test_R, test_F, cong_events
+
+
+def get_cong_avoidance_results_10classes_cosine(epochs=100, min_cond=0.5, max_cond = 0.5, mult=0.1, lr=0.1, min_epochs = 10, num_class_avg = 10, similarity_threshold = 0.2):
+
+    '''Allow the congestion condition to change linearly over time '''
+
+    # Create ResNet model
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    model = ResNet18()
+    model = model.to(device)
+    if device == 'cuda':
+        print('CUDA device used...')
+        model = torch.nn.DataParallel(model)
+        cudnn.benchmark = True
+
+    # Import data
+    trainset, trainloader, testset, testloader = create_sampled_CIFAR10_data()
+
+    # Create variables
+    cls_num = len(trainset.classes)
+    boolean_values = [False]*cls_num
+    grads = {}
+    for cls in range(cls_num):
+        grads[cls] = {}
+    epoch_counts = [0]*cls_num
+    
+    criterion= nn.CrossEntropyLoss(reduction='none')
+    # CREATE MODEL OPTIMIZER
+    optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0, weight_decay=5e-4)
+    scheduler = CyclicLR(optimizer, base_lr=0.0001, max_lr=lr, step_size_up=10, mode="triangular2")
+
+    # BEGIN RECORDING THE TIME
+    start_time = time.time()
+
+    # Create matrices to store results
+
+    train_acc = np.zeros((epochs, 1))
+    train_P = np.zeros((epochs, cls_num))
+    train_R = np.zeros((epochs, cls_num))
+    train_F = np.zeros((epochs, cls_num))
+    test_acc = np.zeros((epochs, 1))
+    test_P = np.zeros((epochs, cls_num))
+    test_R = np.zeros((epochs, cls_num))
+    test_F = np.zeros((epochs, cls_num))
+    cong_events = np.zeros((epochs, cls_num))
+
+    for epoch in range(epochs):
+        print('\n********** EPOCH {} **********'.format(epoch + 1))
+        print('Learning rate: ', optimizer.param_groups[0]['lr'])
+        print('Epoch counts: ', epoch_counts)
+        confusion_matrix, accuracy, recalls, precisions, fScores, grads, epoch_counts = train_congestion_avoider_10_classes(device, model, trainloader, criterion, optimizer, cls_num, epoch_counts, boolean_values, grads)
+        train_acc[epoch] = accuracy
+        train_P[epoch] = precisions
+        train_R[epoch] = recalls
+        train_F[epoch] = fScores
+        optimizer, accuracy, precisions, recalls, fScores, boolean_values, grads, epoch_counts = test_congestion_avoider_10classes_cosine(cls_num, start_time, testloader, device, model, optimizer, scheduler, grads, criterion, epoch, epochs, min_cond, max_cond, min_epochs, mult, epoch_counts, num_class_avg, similarity_threshold)
         test_acc[epoch] = accuracy
         test_P[epoch] = precisions
         test_R[epoch] = recalls
