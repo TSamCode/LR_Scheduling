@@ -6,7 +6,7 @@ from scheduler import congestion_avoid, linear_cong_condition, congestion_avoid_
 import copy
 
 
-def test_congestion_avoider(start_time, testloader, device, model, optimizer, scheduler, branch_one_grads, branch_two_grads, branch_one_class, branch_two_class, branch_one_criterion, branch_two_criterion, epoch, max_epochs, min_cond, max_cond, min_epochs, mult):
+def test_congestion_avoider(start_time, testloader, device, model, optimizer, scheduler, branch_one_grads, branch_two_grads, branch_one_class, branch_two_class, branch_one_criterion, branch_two_criterion, epoch, max_epochs, min_cond, max_cond, min_epochs, mult, metric):
     '''Same as original with additional function to increase the congestion condition linearly over the epochs'''
 
     model.eval()
@@ -100,7 +100,22 @@ def test_congestion_avoider(start_time, testloader, device, model, optimizer, sc
 
         condition = linear_cong_condition(min_cond, max_cond, epoch, max_epochs)
 
-        optimizer, model, boolean_one, boolean_two, branch_one_grads, branch_two_grads = congestion_avoid(model, optimizer, branch_one_precision, branch_two_precision, condition, branch_one_grads, branch_two_grads, min_epochs, mult)
+        if metric == 'recall':
+            branch_one_metric = branch_one_recall
+            branch_two_metric = branch_two_recall
+        elif metric == 'precision':
+            branch_one_metric = branch_one_precision
+            branch_two_metric = branch_two_precision
+        elif metric == 'accuracy':
+            branch_one_metric = branch_one_val_acc
+            branch_two_metric = branch_two_val_acc
+        elif metric == 'F-score':
+            branch_one_metric = branch_one_F
+            branch_two_metric = branch_two_F
+        else:
+            print('ERROR: Metric must be one of (accuracy, precision, recall, F-score)')
+
+        optimizer, model, boolean_one, boolean_two, branch_one_grads, branch_two_grads = congestion_avoid(model, optimizer, branch_one_metric, branch_two_metric, condition, branch_one_grads, branch_two_grads, min_epochs, mult)
         scheduler.step()
 
         print("total test iters ", len(testloader), '| time: %.3f sec Cat Loss: %.3f | Cat Acc: %.3f%% (%d/%d) | Dog Loss: %.3f | Dog Acc: %.3f%% (%d/%d)'
@@ -149,7 +164,7 @@ def test_congestion_avoider(start_time, testloader, device, model, optimizer, sc
     return optimizer, branch_one_val_acc, branch_two_val_acc, branch_one_precision, branch_two_precision, branch_one_recall, branch_two_recall, branch_one_F, branch_two_F, boolean_one, boolean_two, branch_one_grads, branch_two_grads
 
 
-def test_congestion_avoider_10classes(cls_num, start_time, testloader, device, model, optimizer, scheduler, grads, criterion, epoch, max_epochs, min_cond, max_cond, min_epochs, mult, epoch_counts, num_class_avg, min_gradient):
+def test_congestion_avoider_10classes(cls_num, start_time, testloader, device, model, optimizer, scheduler, grads, criterion, epoch, max_epochs, min_cond, max_cond, min_epochs, mult, epoch_counts, num_class_avg, min_gradient, metric):
 
     ''' 
         Inclusion of congestion avoidance strategy within the test function
@@ -195,7 +210,16 @@ def test_congestion_avoider_10classes(cls_num, start_time, testloader, device, m
 
         condition = linear_cong_condition(min_cond, max_cond, epoch, max_epochs)
         
-        optimizer, model, boolean_values, epoch_counts, grads = congestion_avoid_10classes(cls_num, model, optimizer, fScores, condition, grads, min_epochs, mult, epoch_counts, boolean_values, num_class_avg, min_gradient)
+        if metric == 'precision':
+            congestion_metric = precisions
+        elif metric == 'recall':
+            congestion_metric = recalls
+        elif metric == 'F-score':
+            congestion_metric = fScores
+        else:
+            print('ERROR: Metric must be one of (precision, recall, F-score)')
+
+        optimizer, model, boolean_values, epoch_counts, grads = congestion_avoid_10classes(cls_num, model, optimizer, congestion_metric, condition, grads, min_epochs, mult, epoch_counts, boolean_values, num_class_avg, min_gradient)
         scheduler.step()
 
     print('time: %.3f sec'% ((time.time()-start_time)))
@@ -212,7 +236,7 @@ def test_congestion_avoider_10classes(cls_num, start_time, testloader, device, m
     return optimizer, accuracy, precisions, recalls, fScores, boolean_values, grads, epoch_counts
 
 
-def test_congestion_avoider_10classes_cosine(cls_num, start_time, testloader, device, model, optimizer, scheduler, grads, criterion, epoch, max_epochs, min_cond, max_cond, min_epochs, mult, epoch_counts, num_class_avg, similarity_threshold):
+def test_congestion_avoider_10classes_cosine(cls_num, start_time, testloader, device, model, optimizer, scheduler, grads, criterion, epoch, max_epochs, min_cond, max_cond, min_epochs, mult, epoch_counts, num_class_avg, similarity_threshold, metric):
 
     ''' 
         XXXX
@@ -258,7 +282,16 @@ def test_congestion_avoider_10classes_cosine(cls_num, start_time, testloader, de
 
         condition = linear_cong_condition(min_cond, max_cond, epoch, max_epochs)
         
-        optimizer, model, boolean_values, epoch_counts, grads = congestion_avoid_10classes_cosine(cls_num, model, optimizer, fScores, condition, grads, min_epochs, mult, epoch_counts, boolean_values, num_class_avg, similarity_threshold)
+        if metric == 'precision':
+            congestion_metric = precisions
+        elif metric == 'recall':
+            congestion_metric = recalls
+        elif metric == 'F-score':
+            congestion_metric = fScores
+        else:
+            print('ERROR: Metric must be one of (precision, recall, F-score)')
+
+        optimizer, model, boolean_values, epoch_counts, grads = congestion_avoid_10classes_cosine(cls_num, model, optimizer, congestion_metric, condition, grads, min_epochs, mult, epoch_counts, boolean_values, num_class_avg, similarity_threshold)
         scheduler.step()
 
     print('time: %.3f sec'% ((time.time()-start_time)))
