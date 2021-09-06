@@ -7,7 +7,12 @@ import copy
 
 
 def test_congestion_avoider(start_time, testloader, device, model, optimizer, scheduler, branch_one_grads, branch_two_grads, branch_one_class, branch_two_class, branch_one_criterion, branch_two_criterion, epoch, max_epochs, min_cond, max_cond, min_epochs, mult, metric):
-    '''Same as original with additional function to increase the congestion condition linearly over the epochs'''
+    
+    '''
+    Function to test the model. The metrics calculated on the test data are used to determine
+    if a congestion event has occurred. The congestion avoidance scheduler is then used to update the
+    network parameters and dictionaries of acquired knowledge.
+    '''
 
     model.eval()
     branch_one_test_loss = 0
@@ -164,10 +169,42 @@ def test_congestion_avoider(start_time, testloader, device, model, optimizer, sc
     return optimizer, branch_one_val_acc, branch_two_val_acc, branch_one_precision, branch_two_precision, branch_one_recall, branch_two_recall, branch_one_F, branch_two_F, boolean_one, boolean_two, branch_one_grads, branch_two_grads
 
 
-def test_congestion_avoider_10classes(cls_num, start_time, testloader, device, model, optimizer, scheduler, grads, criterion, epoch, max_epochs, min_cond, max_cond, min_epochs, mult, epoch_counts, num_class_avg, min_gradient, metric):
+def test_congestion_avoider_10classes(cls_num, start_time, testloader, device, model, optimizer, scheduler, grads, criterion, epoch, max_epochs, min_cond, max_cond, min_epochs, mult, epoch_counts, num_class_avg, metric):
 
     ''' 
-        Inclusion of congestion avoidance strategy within the test function
+        A function to calculate the performance of the trained model on the test data.
+        The congestion avoidance scheduler uses a congestion metric value to
+        update network weights and dictionary of acquired knowledge as required.
+
+    Inputs:
+        cls_num:
+        start_time:
+        testloader:
+        device:
+        model:
+        optimizer:
+        scheduler:
+        grads:
+        criterion:
+        epoch:
+        max_epochs:
+        min_cond:
+        max_cond:
+        min_epochs:
+        mult:
+        epoch_counts:
+        num_class_avg:
+        metric:
+
+    Returns:
+        optimizer:
+        accuracy:
+        precisions:
+        recalls:
+        fScores:
+        boolean_values:
+        grads:
+        epoch_counts:
     '''
 
     import copy
@@ -219,7 +256,7 @@ def test_congestion_avoider_10classes(cls_num, start_time, testloader, device, m
         else:
             print('ERROR: Metric must be one of (precision, recall, F-score)')
 
-        optimizer, model, boolean_values, epoch_counts, grads = congestion_avoid_10classes(cls_num, model, optimizer, congestion_metric, condition, grads, min_epochs, mult, epoch_counts, boolean_values, num_class_avg, min_gradient)
+        optimizer, model, boolean_values, epoch_counts, grads = congestion_avoid_10classes(cls_num, model, optimizer, congestion_metric, condition, grads, min_epochs, mult, epoch_counts, boolean_values, num_class_avg)
         scheduler.step()
 
     print('time: %.3f sec'% ((time.time()-start_time)))
@@ -239,7 +276,40 @@ def test_congestion_avoider_10classes(cls_num, start_time, testloader, device, m
 def test_congestion_avoider_10classes_cosine(cls_num, start_time, testloader, device, model, optimizer, scheduler, grads, criterion, epoch, max_epochs, min_cond, max_cond, min_epochs, mult, epoch_counts, num_class_avg, similarity_threshold, metric):
 
     ''' 
-        XXXX
+        A function to calculate the performance of the trained model on the test data.
+        The congestion avoidance scheduler uses a congestion metric value to
+        update network weights and dictionary of acquired knowledge as required.
+
+    Inputs:
+        cls_num:
+        start_time:
+        testloader:
+        device:
+        model:
+        optimizer:
+        scheduler:
+        grads:
+        criterion:
+        epoch:
+        max_epochs:
+        min_cond:
+        max_cond:
+        min_epochs:
+        mult:
+        epoch_counts:
+        num_class_avg:
+        similarity_threshold:
+        metric:
+
+    Returns:
+        optimizer:
+        accuracy:
+        precisions:
+        recalls:
+        fScores:
+        boolean_values:
+        grads:
+        epoch_counts:
     '''
 
     import copy
@@ -255,6 +325,7 @@ def test_congestion_avoider_10classes_cosine(cls_num, start_time, testloader, de
     
     with torch.no_grad():
         for batch_idx, (inputs, targets) in enumerate(testloader):
+            print('Test batch: ', batch_idx)
             inputs = inputs.to(device)
             targets = targets.to(device)
             outputs = model(inputs)

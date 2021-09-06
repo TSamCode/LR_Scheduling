@@ -8,9 +8,6 @@ import copy
 
 def train_congestion_avoider(trainloader, device, model, optimizer, branch_one_criterion, branch_two_criterion, branch_one_class, branch_two_class, boolean_one, boolean_two, branch_one_grads, branch_two_grads):
 
-    global epoch_count_one
-    global epoch_count_two
-
     ''' 
         model = The model to be trained
         shared_optim, branch1_optim, branch2_optim = the optimizers used to determine how network weights are updated in each section of the network (e.g. SGD)
@@ -20,9 +17,11 @@ def train_congestion_avoider(trainloader, device, model, optimizer, branch_one_c
         epoch = The current epoch in training
      '''
 
-    import copy
+    global epoch_count_one
+    global epoch_count_two
 
     model.train()
+    # Create variables for each branch that will be updated during training
     branch_one_train_loss = 0
     branch_two_train_loss = 0
     branch_one_correct = 0
@@ -40,37 +39,38 @@ def train_congestion_avoider(trainloader, device, model, optimizer, branch_one_c
     branch_two_grads_tmp = {}
     start_time = time.time()
     
-    #if (epoch % reset_epochs == 0) or boolean_two:
     if boolean_two:
-        # SHOULD I RESET THE GRADIENTS HERE OR SHOULD IT ALWAYS BE A ROLLING SUM!!!!
-        #branch_one_grads = {}
         epoch_count_one = 0
-    #if (epoch % reset_epochs == 0) or boolean_one:
     if boolean_one:
-        # SHOULD I RESET THE GRADIENTS HERE OR SHOULD IT ALWAYS BE A ROLLING SUM!!!!
-        #branch_two_grads = {}
         epoch_count_two = 0
     
     for batch_idx, (inputs, targets) in enumerate(trainloader):
+        # Create binary training data labels for each branch of the model
         branch_one_targets = get_binary_label(targets, index=branch_one_class)
         branch_two_targets = get_binary_label(targets, index=branch_two_class)
         
+        # Find the indices of the training data that will be passed to each branch of the model
         branch_one_idx, branch_two_idx = get_branch_indices(targets, classes=[branch_one_class, branch_two_class])
         branch_one_inputs = torch.index_select(inputs, 0, branch_one_idx)
         branch_one_targets = torch.index_select(branch_one_targets, 0, branch_one_idx)
         branch_two_inputs = torch.index_select(inputs, 0, branch_two_idx)
         branch_two_targets = torch.index_select(branch_two_targets, 0, branch_two_idx)
         
+        # Move the tensors to the device (allows for CUDA functionality on Google Colab)
         branch_one_inputs, branch_two_inputs, branch_one_targets, branch_two_targets = branch_one_inputs.to(device), branch_two_inputs.to(device), branch_one_targets.to(device), branch_two_targets.to(device)
         optimizer.zero_grad()
         
+        # For the training data passed to each branch of the model perform the forward pass
         branch_one_outputs, _ = model(branch_one_inputs)
         _, branch_two_outputs = model(branch_two_inputs)
 
+        # Find the loss on each branch of the network
         branch_one_loss = branch_one_criterion(branch_one_outputs, branch_one_targets)
         branch_two_loss = branch_two_criterion(branch_two_outputs, branch_two_targets)
         
-        # Back-propagate the loss due to 'cats'
+        # Back-propagate the loss due from branch one
+        # Update the branch one acquired knowledge (as gradient multiplied by learning rate)
+        # Save the knowledge in a temporary branch two dictionary
         branch_one_loss.backward(retain_graph=True)
         with torch.no_grad():
             for name, parameter in model.named_parameters():
@@ -83,6 +83,9 @@ def train_congestion_avoider(trainloader, device, model, optimizer, branch_one_c
                 except:
                     pass
 
+        # Back-propagate the loss due from branch two
+        # Update the branch two acquired knowledge (as gradient multiplied by learning rate)
+        # by observing the change in gradient from the results back-propagated from branch one
         branch_two_loss.backward(retain_graph=True)
         with torch.no_grad():
             for name, parameter in model.named_parameters():
@@ -102,6 +105,7 @@ def train_congestion_avoider(trainloader, device, model, optimizer, branch_one_c
                         pass
         optimizer.zero_grad()
 
+        # The loss from each branch is summed and back-propagated. The model parameters updated by calling step()
         total_loss = branch_one_loss + branch_two_loss
         total_loss.backward()
         optimizer.step()
@@ -115,6 +119,7 @@ def train_congestion_avoider(trainloader, device, model, optimizer, branch_one_c
         branch_one_correct += branch_one_predicted.eq(branch_one_targets).sum().item()
         branch_two_correct += branch_two_predicted.eq(branch_two_targets).sum().item()
 
+        # Calculate the values in a confusion matrix to then calculate accuracy, precision, recall & F-score
         for target, pred in zip(branch_one_targets, branch_one_predicted):
           if target == 0:
             if pred == 0:
@@ -186,7 +191,7 @@ def train_congestion_avoider(trainloader, device, model, optimizer, branch_one_c
 def train_congestion_avoider_10classes_archive(cls_num, trainloader_full, trainloaders, device, model, optimizer, criterion, boolean_values, grads, epoch_counts):
 
     ''' 
-        Function to train ResNet model on ten classes of images, each class of images is passed to the model in turn
+        Function to train ResNet model on ten classes of images
     '''
 
     model.train()
@@ -268,30 +273,58 @@ def train_congestion_avoider_10classes_archive(cls_num, trainloader_full, trainl
 
 def train_congestion_avoider_10_classes(device, model, trainloader, criterion, optimizer, cls_num, epoch_counts, boolean_values, grads):
 
+  '''
+  A function to train a ResNet model on the CIFAR-10 dataset with ten classes.
+  Calculate the values of the confusion matrix and subsequent metrics.
+
+  Inputs:
+    device: string - The device the code is being run on
+    model: The PyTorch ResNet model being trained
+    trainloader: The PyTroch data loader for training data
+    criterion: The loss criterion for the model
+    optimizer: The model optimizer
+    cls_num: int - The number of classes of images being trained
+    epoch_counts: list - The number of epochs trained since the last congestion event
+    boolean_values:
+    grads: dict - The accumulated acquired knowledge for each image class & for each model parameter
+
+  Returns:
+    confusion_matrix:
+    accuracy:
+    recalls:
+    precisions:
+    fScores:
+    grads:
+    epoch_counts: number of epochs trained since the last congestion event
+  '''
+
   model.train()
   start_time = time.time()
 
+  # Create a matrix to store the confusion matrix results from the training epoch
   confusion_matrix = np.zeros((cls_num, cls_num))
 
   for epoch_count, boolean in zip(epoch_counts, boolean_values):
       if boolean:
           epoch_count = 0
   
-  #input, target = next(iter(trainloader))
-  #for inputs, targets in zip([input], [target]):
   for batch_idx, (inputs, targets) in enumerate(trainloader):
+    print('Training Batch: ', batch_idx)
     inputs = inputs.to(device)
     targets = targets.to(device)
     optimizer.zero_grad()
     outputs = model(inputs)
     loss = criterion(outputs,targets)
 
+    # Create a mask for each class of data
     masks = [targets == k for k in range(cls_num)]
+    # Find the loss due to each class of image
     sub_losses = [loss[mask].mean() for mask in masks]
     
     for name,param in model.named_parameters():
         param.grad = None
 
+    # For each class of image accumulate the acquired knowledge of the network from these images
     for cls, sub_loss in enumerate(sub_losses):
       sub_loss.backward(retain_graph=True)
       for name,param in model.named_parameters():
@@ -301,6 +334,7 @@ def train_congestion_avoider_10_classes(device, model, trainloader, criterion, o
           grads[cls][name] = torch.mul(copy.deepcopy(param.grad), optimizer.param_groups[0]['lr'])
         param.grad=None
     
+    # The mean of the total loss is back-propagated and weights updated using step()
     optimizer.zero_grad()
     loss.mean().backward()  
     optimizer.step()
@@ -310,6 +344,7 @@ def train_congestion_avoider_10_classes(device, model, trainloader, criterion, o
     for target, pred in zip(targets, predicted):
         confusion_matrix[target][pred] += 1
 
+  # Create numpy arrays to store the metrics for each class of images
   recalls = np.zeros((cls_num))
   precisions = np.zeros((cls_num))
   fScores = np.zeros((cls_num))

@@ -5,6 +5,18 @@ import numpy as np
 
 def create_CIFAR_data():
 
+    '''
+    A function to load the CIFAR-10 dataset from PyTorch
+
+    Inputs: None
+
+    Returns
+        trainset: The CIFAR-10 training data
+        trainloader: The data loader containing batches of data from the CIFAR-10 training data
+        testset: The CIFAR-10 test data
+        testloader: The data loader containing batches of data from the CIFAR-10 test data
+    '''
+
     transform_train = transforms.Compose([
     transforms.RandomCrop(32, padding=4),
     transforms.RandomHorizontalFlip(),
@@ -27,6 +39,16 @@ def create_CIFAR_data():
 
 
 class IMBALANCECIFAR10(torchvision.datasets.CIFAR10):
+
+    '''
+    A class to create an unbalanced CIFAR-10 dataset.
+
+    The implementation for this class has been provided by my dissertation supervisor Konstantinos Alexandridis,
+    the source of this code can be found in the GitHub repository here:
+    https://github.com/kostas1515/iif/blob/master/classification/imbalanced_dataset.py
+
+    '''
+
     cls_num = 10
 
     def __init__(self, root, imb_type='exp', imb_factor=0.01, rand_number=0, train=True,
@@ -79,6 +101,21 @@ class IMBALANCECIFAR10(torchvision.datasets.CIFAR10):
 
 
 def create_sampled_CIFAR10_data():
+
+    '''
+    A function that uses the IMBALANCECIFAR10 class to load the CIFAR-10 data,
+    with data sampled from each class to create an unbalanced training dataset.
+    The test dataset remain balanced so that the metrics produced make use of all test data available.
+
+    Inputs:
+        None
+
+    Returns:
+        trainset: Unbalanced CIFAR-10 dataset, sampled at an exponentially decreasing rate from each class
+        trainloader: PyTorch dataloader for the sampled training data
+        testset: CIFAR-10 test data, the test data is sampled equally from each class
+        testloader: PyTorch dataloader for the sampled test data
+    '''
 
     transform_train = transforms.Compose([
             transforms.RandomCrop(32, padding=4),
