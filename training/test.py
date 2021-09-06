@@ -2,7 +2,7 @@ import numpy as np
 import time
 import torch
 from create_data import get_binary_label
-from scheduler import congestion_avoid, linear_cong_condition, congestion_avoid_10classes
+from scheduler import congestion_avoid, linear_cong_condition, congestion_avoid_10classes, congestion_avoid_10classes_cosine
 import copy
 
 
@@ -196,6 +196,69 @@ def test_congestion_avoider_10classes(cls_num, start_time, testloader, device, m
         condition = linear_cong_condition(min_cond, max_cond, epoch, max_epochs)
         
         optimizer, model, boolean_values, epoch_counts, grads = congestion_avoid_10classes(cls_num, model, optimizer, fScores, condition, grads, min_epochs, mult, epoch_counts, boolean_values, num_class_avg, min_gradient)
+        scheduler.step()
+
+    print('time: %.3f sec'% ((time.time()-start_time)))
+    print('Rows: Actual, Columns: Predicted')
+    print(confusion_matrix)
+    for cls in range(cls_num):
+        print('Class %d A: : %.3f%% (%d/%d)'%(cls, 100*accuracy, np.trace(confusion_matrix), confusion_matrix.sum()))
+        print('Class %d P: : %.3f%% (%d/%d)'%(cls, 100*precisions[cls], confusion_matrix[cls][cls], confusion_matrix.sum(0)[cls]))
+        print('Class %d R: : %.3f%% (%d/%d)'%(cls, 100*recalls[cls], confusion_matrix[cls][cls], confusion_matrix.sum(1)[cls]))
+        print('Class %d F: : %.3f%%'%(cls, 100*fScores[cls]))
+        print('********************')
+
+
+    return optimizer, accuracy, precisions, recalls, fScores, boolean_values, grads, epoch_counts
+
+
+def test_congestion_avoider_10classes_cosine(cls_num, start_time, testloader, device, model, optimizer, scheduler, grads, criterion, epoch, max_epochs, min_cond, max_cond, min_epochs, mult, epoch_counts, num_class_avg, similarity_threshold):
+
+    ''' 
+        XXXX
+    '''
+
+    import copy
+
+    print('Classes in test function: ', cls_num)
+
+    model.eval()
+    confusion_matrix = np.zeros((cls_num, cls_num))
+    recalls = np.zeros((cls_num))
+    precisions = np.zeros((cls_num))
+    fScores = np.zeros((cls_num))
+    boolean_values = np.zeros((cls_num))
+    
+    with torch.no_grad():
+        for batch_idx, (inputs, targets) in enumerate(testloader):
+            inputs = inputs.to(device)
+            targets = targets.to(device)
+            outputs = model(inputs)
+            loss = criterion(outputs,targets)
+            _, predicted = outputs.max(1)
+
+            for target, pred in zip(targets, predicted):
+                confusion_matrix[target][pred] += 1
+    
+        for cls in range(cls_num):
+            if confusion_matrix.sum(1)[cls] != 0:
+                recalls[cls] = confusion_matrix[cls][cls] / confusion_matrix.sum(1)[cls]
+            else:
+                recalls[cls] = 0
+            if confusion_matrix.sum(0)[cls] != 0:
+                precisions[cls] = confusion_matrix[cls][cls] / confusion_matrix.sum(0)[cls]
+            else:
+                precisions[cls] = 0
+            if (precisions[cls] + recalls[cls]) != 0:
+                fScores[cls] = 2 * precisions[cls] * recalls[cls] / (precisions[cls] + recalls[cls])
+            else:
+                fScores[cls] = 0
+
+        accuracy = np.trace(confusion_matrix) / confusion_matrix.sum()
+
+        condition = linear_cong_condition(min_cond, max_cond, epoch, max_epochs)
+        
+        optimizer, model, boolean_values, epoch_counts, grads = congestion_avoid_10classes_cosine(cls_num, model, optimizer, fScores, condition, grads, min_epochs, mult, epoch_counts, boolean_values, num_class_avg, similarity_threshold)
         scheduler.step()
 
     print('time: %.3f sec'% ((time.time()-start_time)))
