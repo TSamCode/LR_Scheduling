@@ -183,7 +183,6 @@ def get_cong_avoidance_results_10classes_cosine(epochs=100, min_cond=0.5, max_co
 
     # Create variables
     cls_num = len(trainset.classes)
-    boolean_values = [False]*cls_num
     grads = {}
     for cls in range(cls_num):
         grads[cls] = {}
@@ -209,7 +208,7 @@ def get_cong_avoidance_results_10classes_cosine(epochs=100, min_cond=0.5, max_co
         print('\n********** EPOCH {} **********'.format(epoch + 1))
         print('Learning rate: ', optimizer.param_groups[0]['lr'])
         print('Epochs since last congestion event: ', epoch_counts)
-        confusion_matrix, accuracy, recalls, precisions, fScores, grads, epoch_counts = train_congestion_avoider_10_classes(device, model, trainloader, criterion, optimizer, cls_num, epoch_counts, boolean_values, grads)
+        confusion_matrix, accuracy, recalls, precisions, fScores, grads, epoch_counts = train_congestion_avoider_10_classes(device, model, trainloader, criterion, optimizer, cls_num, epoch_counts, grads)
         train_acc[epoch] = accuracy
         train_P[epoch] = precisions
         train_R[epoch] = recalls

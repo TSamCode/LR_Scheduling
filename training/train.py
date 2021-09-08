@@ -271,7 +271,7 @@ def train_congestion_avoider_10classes_archive(cls_num, trainloader_full, trainl
     return confusion_matrix, accuracy, recalls, precisions, fScores, grads, epoch_counts
 
 
-def train_congestion_avoider_10_classes(device, model, trainloader, criterion, optimizer, cls_num, epoch_counts, boolean_values, grads):
+def train_congestion_avoider_10_classes(device, model, trainloader, criterion, optimizer, cls_num, epoch_counts, grads):
 
   '''
   A function to train a ResNet model on the CIFAR-10 dataset with ten classes.
@@ -303,10 +303,6 @@ def train_congestion_avoider_10_classes(device, model, trainloader, criterion, o
 
   # Create a matrix to store the confusion matrix results from the training epoch
   confusion_matrix = np.zeros((cls_num, cls_num))
-
-  for epoch_count, boolean in zip(epoch_counts, boolean_values):
-      if boolean:
-          epoch_count = 0
   
   for batch_idx, (inputs, targets) in enumerate(trainloader):
     print('Training Batch: ', batch_idx)

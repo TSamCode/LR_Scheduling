@@ -177,34 +177,34 @@ def test_congestion_avoider_10classes(cls_num, start_time, testloader, device, m
         update network weights and dictionary of acquired knowledge as required.
 
     Inputs:
-        cls_num:
-        start_time:
-        testloader:
-        device:
-        model:
-        optimizer:
-        scheduler:
-        grads:
-        criterion:
-        epoch:
-        max_epochs:
-        min_cond:
-        max_cond:
-        min_epochs:
-        mult:
-        epoch_counts:
-        num_class_avg:
-        metric:
+        cls_num: int - The number of classes of images being classified
+        start_time: time the training procedure began
+        testloader: The PyTroch data loader for the test data
+        device: The device the code is being run on
+        model: The PyTorch ResNet model being trained
+        optimizer: The PyTorch optimizer being used for model weight updates (e.g. SGD)
+        scheduler: The PyTorch learning rate scheduler being used
+        grads: dict - The dictionary of acquired knowledge for each parameter due to each class of images
+        criterion: The PyTorch loss criterion being used
+        epoch: int - the epoch of the training process
+        max_epochs: int - the total number of epochs the model will be trained for
+        min_cond: float - the lower bound of the congestion condition parameter that will be interpolated between
+        max_cond: float - the upper bound of the congestion condition parameter that will be interpolated between
+        min_epochs: int - the minimum number of epochs that must pass between successive congestion events
+        mult: float - the multiplicative decrease factor that determines the proportion of knowledge returned
+        epoch_counts: list - the number of epochs since the last congestion event for each class of images
+        num_class_avg: int - the number of images classes used to determine the congestion threshold metric value
+        metric: ['recall','precision','F-score'] - parameter to determine which metric is used to determine a congestion event
 
     Returns:
-        optimizer:
-        accuracy:
-        precisions:
-        recalls:
-        fScores:
-        boolean_values:
-        grads:
-        epoch_counts:
+        optimizer: The PyTorch optimizer being used for model weight updates (e.g. SGD)
+        accuracy: float - the total accuracy of the model
+        precisions: list - the precision for each class of images
+        recalls: list - the recall for each class of images
+        fScores: list - the F-score for each class of images
+        boolean_values: list - indicator of if a congestion event has occurred for each class of images
+        grads: dict -  The dictionary of acquired knowledge for each parameter due to each class of images, after knowledge has been returned
+        epoch_counts: list - the number of epochs since the last congestion event for each class of images
     '''
 
     import copy
@@ -281,35 +281,35 @@ def test_congestion_avoider_10classes_cosine(cls_num, start_time, testloader, de
         update network weights and dictionary of acquired knowledge as required.
 
     Inputs:
-        cls_num:
-        start_time:
-        testloader:
-        device:
-        model:
-        optimizer:
-        scheduler:
-        grads:
-        criterion:
-        epoch:
-        max_epochs:
-        min_cond:
-        max_cond:
-        min_epochs:
-        mult:
-        epoch_counts:
-        num_class_avg:
-        similarity_threshold:
-        metric:
+        cls_num: int - The number of classes of images being classified
+        start_time: time the training procedure began
+        testloader: The PyTroch data loader for the test data
+        device: The device the code is being run on
+        model: The PyTorch ResNet model being trained
+        optimizer: The PyTorch optimizer being used for model weight updates (e.g. SGD)
+        scheduler: The PyTorch learning rate scheduler being used
+        grads: dict - The dictionary of acquired knowledge for each parameter due to each class of images
+        criterion: The PyTorch loss criterion being used
+        epoch: int - the epoch of the training process
+        max_epochs: int - the total number of epochs the model will be trained for
+        min_cond: float - the lower bound of the congestion condition parameter that will be interpolated between
+        max_cond: float - the upper bound of the congestion condition parameter that will be interpolated between
+        min_epochs: int - the minimum number of epochs that must pass between successive congestion events
+        mult: float - the multiplicative decrease factor that determines the proportion of knowledge returned
+        epoch_counts: list - the number of epochs since the last congestion event for each class of images
+        num_class_avg: int - the number of images classes used to determine the congestion threshold metric value
+        similarity_threshold: float - the cosine similarity threshold to determine which layers return knowledge
+        metric: ['recall','precision','F-score'] - parameter to determine which metric is used to determine a congestion event
 
     Returns:
-        optimizer:
-        accuracy:
-        precisions:
-        recalls:
-        fScores:
-        boolean_values:
-        grads:
-        epoch_counts:
+        optimizer: The PyTorch optimizer being used for model weight updates (e.g. SGD)
+        accuracy: float - the total accuracy of the model
+        precisions: list - the precision for each class of images
+        recalls: list - the recall for each class of images
+        fScores: list - the F-score for each class of images
+        boolean_values: list - indicator of if a congestion event has occurred for each class of images
+        grads: dict -  The dictionary of acquired knowledge for each parameter due to each class of images, after knowledge has been returned
+        epoch_counts: list - the number of epochs since the last congestion event for each class of images
     '''
 
     import copy

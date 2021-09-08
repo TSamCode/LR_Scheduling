@@ -4,14 +4,25 @@ import pickle
 import numpy as np
 
 
-def moving_average(data, window_size):
+def moving_average(data, smooth_param):
+
+    '''
+    A function to calculate the moving average of a list of data
+
+    Inputs:
+      data: the raw data that will be smoothed
+      smooth_param: int - the number of data items used to create each moving average value
+
+    Returns:
+      moving_averages: list - the smoothed data
+    '''
     
     index = 0
     moving_averages = []
     
-    while index < len(data) - window_size + 1:
-        window = data[index : index + window_size]
-        average = sum(window) / window_size
+    while index < len(data) - smooth_param + 1:
+        sub_data = data[index : index + smooth_param]
+        average = sum(sub_data) / smooth_param
         moving_averages.append(average)
         index += 1
 
@@ -163,8 +174,22 @@ def plot_results_diff_twoClass(names, params, colors, smooth = 5):
     plt.show()
 
 
-def plot_results_multiClass(names, params, colors, smooth = 5, vlines=True):
+def plot_results_multiClass(name, colors, smooth = 5, vlines=True):
 
+    '''
+    A function to plot the performance metrics of the trained model for each class of images on the test data
+
+    Inputs:
+      name: string - the name of the file that contains the data to create the plots
+      colors: list - A list of colors used for each line on the plots
+      smooth: int - the level of smoothing used in the moving average function to smooth the data
+      vlines: boolean - indicator to determine whether vertical lines are shown on the plot to show which epochs congestion events occur in
+
+    Returns:
+      None
+    '''
+
+    # Create a 2x2 subplot
     fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(12,6))
     idx_to_class = {0: 'airplane', 1: 'automobile', 
                     2: 'bird', 3: 'cat', 
@@ -172,47 +197,48 @@ def plot_results_multiClass(names, params, colors, smooth = 5, vlines=True):
                     6: 'frog', 7: 'horse', 
                     8: 'ship', 9: 'truck'}
 
+    # Read the pickle file to create the required variables
+    with open(name, 'rb') as data:
+        train_acc = pickle.load(data)
+        train_P = pickle.load(data)
+        train_R = pickle.load(data)
+        train_F = pickle.load(data)
+        test_acc = pickle.load(data)
+        test_P = pickle.load(data)
+        test_R = pickle.load(data)
+        test_F = pickle.load(data)
+        cong_events = pickle.load(data)
 
-    for index, (name, param) in enumerate(zip(names, params)):
-        with open(name, 'rb') as data:
-            train_acc = pickle.load(data)
-            train_P = pickle.load(data)
-            train_R = pickle.load(data)
-            train_F = pickle.load(data)
-            test_acc = pickle.load(data)
-            test_P = pickle.load(data)
-            test_R = pickle.load(data)
-            test_F = pickle.load(data)
-            cong_events = pickle.load(data)
-
-        cls_num = int(train_P[0].shape[0])
+    cls_num = int(train_P[0].shape[0])
+    
+    # Plot the accuracy of the model
+    ax[0,0].plot(moving_average(test_acc,smooth), color='k')
+    ax[0,0].set_title('Accuracy \n(moving average of over {} epochs)'.format(smooth))
+    ax[0,0].yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
+    
+    # For each class of images plot the smoothed precision, recall & F-score in the corresponding subplot
+    for cls in range(cls_num):
+        ax[0,1].plot(moving_average(test_P[:,cls],smooth), color = colors[cls], label='Class {}: {}'.format(cls,idx_to_class[cls]))
+        ax[1,0].plot(moving_average(test_R[:,cls],smooth), color = colors[cls], label='Class {}: {}'.format(cls,idx_to_class[cls]))
+        ax[1,1].plot(moving_average(test_F[:,cls],smooth), color = colors[cls], label='Class {}: {}'.format(cls,idx_to_class[cls]))
+    
+    # If a congestion event has happened in that epoch then a vertical line is added to the graph at that epoch
+    cong_events = np.sum(cong_events,1)
+    if vlines:
+        for i, event in enumerate(cong_events):
+            if event > 0:
+                ax[0,0].axvline(x=i, color='grey', linestyle='--', linewidth=0.5)
+                ax[0,1].axvline(x=i, color='grey', linestyle='--', linewidth=0.5)
+                ax[1,0].axvline(x=i, color='grey', linestyle='--', linewidth=0.5)
+                ax[1,1].axvline(x=i, color='grey', linestyle='--', linewidth=0.5)
         
-        ax[0,0].plot(moving_average(test_acc,smooth), color='k')
-        ax[0,0].set_title('Accuracy \n(moving average of over {} epochs)'.format(smooth))
-        ax[0,0].yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
-        
-        for cls in range(cls_num):
-            ax[0,1].plot(moving_average(test_P[:,cls],smooth), color = colors[cls], label='Class {}: {}'.format(cls,idx_to_class[cls]))
-            ax[1,0].plot(moving_average(test_R[:,cls],smooth), color = colors[cls], label='Class {}: {}'.format(cls,idx_to_class[cls]))
-            ax[1,1].plot(moving_average(test_F[:,cls],smooth), color = colors[cls], label='Class {}: {}'.format(cls,idx_to_class[cls]))
-        
-        cong_events = np.sum(cong_events,1)
-        
-        if vlines:
-            for i, event in enumerate(cong_events):
-                if event > 0:
-                    ax[0,0].axvline(x=i, color='grey', linestyle='--', linewidth=0.5)
-                    ax[0,1].axvline(x=i, color='grey', linestyle='--', linewidth=0.5)
-                    ax[1,0].axvline(x=i, color='grey', linestyle='--', linewidth=0.5)
-                    ax[1,1].axvline(x=i, color='grey', linestyle='--', linewidth=0.5)
-            
-        
-        ax[0,1].set_title('Precision \n(moving average of over {} epochs)'.format(smooth))
-        ax[1,0].set_title('Recall \n(moving average of over {} epochs)'.format(smooth))
-        ax[1,1].set_title('F-score \n(moving average of over {} epochs)'.format(smooth))
-        ax[0,1].yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
-        ax[1,0].yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
-        ax[1,1].yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
+    # Add titles, axis formatting and legends to the plots
+    ax[0,1].set_title('Precision \n(moving average of over {} epochs)'.format(smooth))
+    ax[1,0].set_title('Recall \n(moving average of over {} epochs)'.format(smooth))
+    ax[1,1].set_title('F-score \n(moving average of over {} epochs)'.format(smooth))
+    ax[0,1].yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
+    ax[1,0].yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
+    ax[1,1].yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
     
     fig.text(0.5, 0.04, 'Epoch', ha='center', va='center')
     handles, labels = ax[1,0].get_legend_handles_labels()
@@ -222,7 +248,22 @@ def plot_results_multiClass(names, params, colors, smooth = 5, vlines=True):
     plt.show()
 
 
-def plot_results_diff_multiClass(baseline, names, params, colors, smooth = 5, vlines=True):
+def plot_results_diff_multiClass(baseline, name, colors, smooth = 5, vlines=True):
+
+    '''
+    A function to plot the difference in performance metrics for the trained model using
+    the congestion avoidance scheduler with the model without the congestion avoidance scheduler.
+
+    Inputs:
+      baseline: string - the name of the file that contains the data for the baseline position (i.e. no congestion avoidance)
+      name: string - the name of the file that contains the data to create the plots
+      colors: list - A list of colors used for each line on the plots
+      smooth: int - the level of smoothing used in the moving average function to smooth the data
+      vlines: boolean - indicator to determine whether vertical lines are shown on the plot to show which epochs congestion events occur in
+
+    Returns:
+      None
+    '''
 
     fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(12,6))
     idx_to_class = {0: 'airplane', 1: 'automobile', 
@@ -231,7 +272,7 @@ def plot_results_diff_multiClass(baseline, names, params, colors, smooth = 5, vl
                     6: 'frog', 7: 'horse', 
                     8: 'ship', 9: 'truck'}
 
-
+    # Read the pickle file containing the results when no congestion avoidance scheduler is used
     with open(baseline, 'rb') as baseline:
         base_train_acc = pickle.load(baseline)
         base_train_P = pickle.load(baseline)
@@ -242,58 +283,62 @@ def plot_results_diff_multiClass(baseline, names, params, colors, smooth = 5, vl
         base_test_R = pickle.load(baseline)
         base_test_F = pickle.load(baseline)
     
-    for index, (name, param) in enumerate(zip(names, params)):
-        with open(name, 'rb') as data:
-            train_acc = pickle.load(data)
-            train_P = pickle.load(data)
-            train_R = pickle.load(data)
-            train_F = pickle.load(data)
-            test_acc = pickle.load(data)
-            test_P = pickle.load(data)
-            test_R = pickle.load(data)
-            test_F = pickle.load(data)
-            cong_events = pickle.load(data)
+    # Read the pickle file containing the results when the congestion avoidance scheduler is used
+    with open(name, 'rb') as data:
+        train_acc = pickle.load(data)
+        train_P = pickle.load(data)
+        train_R = pickle.load(data)
+        train_F = pickle.load(data)
+        test_acc = pickle.load(data)
+        test_P = pickle.load(data)
+        test_R = pickle.load(data)
+        test_F = pickle.load(data)
+        cong_events = pickle.load(data)
 
-        cls_num = int(train_P[0].shape[0])
+    cls_num = int(train_P[0].shape[0])
 
-        test_acc_diff = test_acc - base_test_acc
-        
-        ax[0,0].plot(moving_average(test_acc_diff,smooth), color='k')
-        ax[0,0].set_title('Change to accuracy from baseline \n(moving average of over {} epochs)'.format(smooth))
-        ax[0,0].yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
-        
-        for cls in range(cls_num):
-            test_P_diff = test_P[:,cls] - base_test_P[:,cls]
-            test_R_diff = test_R[:,cls] - base_test_R[:,cls]
-            test_F_diff = test_F[:,cls] - base_test_F[:,cls]
-            ax[0,1].plot(moving_average(test_P_diff,smooth), color = colors[cls], label='Class {}: {}'.format(cls,idx_to_class[cls]))
-            ax[1,0].plot(moving_average(test_R_diff,smooth), color = colors[cls], label='Class {}: {}'.format(cls,idx_to_class[cls]))
-            ax[1,1].plot(moving_average(test_F_diff,smooth), color = colors[cls], label='Class {}: {}'.format(cls,idx_to_class[cls]))
-        
-        cong_events = np.sum(cong_events,1)
-        
-        if vlines:
-            for i, event in enumerate(cong_events):
-                if event > 0:
-                    ax[0,0].axvline(x=i, color='grey', linestyle='--', linewidth=0.5)
-                    ax[0,1].axvline(x=i, color='grey', linestyle='--', linewidth=0.5)
-                    ax[1,0].axvline(x=i, color='grey', linestyle='--', linewidth=0.5)
-                    ax[1,1].axvline(x=i, color='grey', linestyle='--', linewidth=0.5)
-            
-        ax[0,0].plot([0]*len(moving_average(test_acc_diff,smooth)), color='grey', linestyle='--', linewidth=0.5)
-        ax[0,1].plot([0]*len(moving_average(test_acc_diff,smooth)), color='grey', linestyle='--', linewidth=0.5)
-        ax[1,0].plot([0]*len(moving_average(test_acc_diff,smooth)), color='grey', linestyle='--', linewidth=0.5)
-        ax[1,1].plot([0]*len(moving_average(test_acc_diff,smooth)), color='grey', linestyle='--', linewidth=0.5)
+    # Calculate the change to the accuracy in each epoch with the inclusion of congestion avoidance
+    test_acc_diff = test_acc - base_test_acc
+    
+    ax[0,0].plot(moving_average(test_acc_diff,smooth), color='k')
+    ax[0,0].set_title('Change to accuracy from baseline \n(moving average of over {} epochs)'.format(smooth))
+    ax[0,0].yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
+    
+    # For each class plot the change in recall, precision and F-score
+    for cls in range(cls_num):
+        test_P_diff = test_P[:,cls] - base_test_P[:,cls]
+        test_R_diff = test_R[:,cls] - base_test_R[:,cls]
+        test_F_diff = test_F[:,cls] - base_test_F[:,cls]
+        ax[0,1].plot(moving_average(test_P_diff,smooth), color = colors[cls], label='Class {}: {}'.format(cls,idx_to_class[cls]))
+        ax[1,0].plot(moving_average(test_R_diff,smooth), color = colors[cls], label='Class {}: {}'.format(cls,idx_to_class[cls]))
+        ax[1,1].plot(moving_average(test_F_diff,smooth), color = colors[cls], label='Class {}: {}'.format(cls,idx_to_class[cls]))
+    
+    # Add a vertical line to the subplots in each epoch that a congestion event occurs
+    cong_events = np.sum(cong_events,1)
+    if vlines:
+        for i, event in enumerate(cong_events):
+            if event > 0:
+                ax[0,0].axvline(x=i, color='grey', linestyle='--', linewidth=0.5)
+                ax[0,1].axvline(x=i, color='grey', linestyle='--', linewidth=0.5)
+                ax[1,0].axvline(x=i, color='grey', linestyle='--', linewidth=0.5)
+                ax[1,1].axvline(x=i, color='grey', linestyle='--', linewidth=0.5)
+    
+    # Add a dashed line along 0% to show the base position of no change in the metric values
+    ax[0,0].plot([0]*len(moving_average(test_acc_diff,smooth)), color='grey', linestyle='--', linewidth=0.5)
+    ax[0,1].plot([0]*len(moving_average(test_acc_diff,smooth)), color='grey', linestyle='--', linewidth=0.5)
+    ax[1,0].plot([0]*len(moving_average(test_acc_diff,smooth)), color='grey', linestyle='--', linewidth=0.5)
+    ax[1,1].plot([0]*len(moving_average(test_acc_diff,smooth)), color='grey', linestyle='--', linewidth=0.5)
 
-        ax[0,1].set_title('Change to precision from baseline \n(moving average of over {} epochs)'.format(smooth))
-        ax[1,0].set_title('Change to recall from baseline \n(moving average of over {} epochs)'.format(smooth))
-        ax[1,1].set_title('Change to F-score from baseline \n(moving average of over {} epochs)'.format(smooth))
-        ax[0,1].set_ylim([-0.1,0.1])
-        ax[1,0].set_ylim([-0.1,0.1])
-        ax[1,1].set_ylim([-0.1,0.1])
-        ax[0,1].yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
-        ax[1,0].yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
-        ax[1,1].yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
+    # Add titles, legends, axis formatting to the subplots
+    ax[0,1].set_title('Change to precision from baseline \n(moving average of over {} epochs)'.format(smooth))
+    ax[1,0].set_title('Change to recall from baseline \n(moving average of over {} epochs)'.format(smooth))
+    ax[1,1].set_title('Change to F-score from baseline \n(moving average of over {} epochs)'.format(smooth))
+    ax[0,1].set_ylim([-0.1,0.1])
+    ax[1,0].set_ylim([-0.1,0.1])
+    ax[1,1].set_ylim([-0.1,0.1])
+    ax[0,1].yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
+    ax[1,0].yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
+    ax[1,1].yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
     
     fig.text(0.5, 0.04, 'Epoch', ha='center', va='center')
     handles, labels = ax[1,0].get_legend_handles_labels()
