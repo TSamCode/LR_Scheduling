@@ -1,9 +1,13 @@
 # LR_Scheduling
 
-A repository to store the code required to implemented the TCP "congestion protocol" learning rate scheduling policy.
+A repository to store the code required to implement the TCP "congestion congestion avoidance stategy" for branched models to acquire "knowledge" at equal rates
 
 Data used:
 - CIFAR 10
 
 Model used:
 - ResNet18
+
+Congestion avoidance versions:
+- "congestion_avoid" --> Implemented to be used on a ResNet18 model with two parallel branches. Each branch is learning to classify one class of images
+- "congestion_avoid_10classes" --> Implemented to be used on a ResNet18 model learning to classify all ten image classes from CIFAR-10
