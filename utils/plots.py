@@ -31,8 +31,24 @@ def moving_average(data, smooth_param):
 
 def plot_results_twoClass(names, params, class_names, colors, smooth = 5):
 
+    '''
+    A function to plot the performance metrics of the trained model for each branch of the model on the test data
+
+    Inputs:
+      names: list - The list of names of files to be read
+      params: list - the list of parameters used in each file, will be used to create a legend
+      class_names: list - the list of image classes learned by each model branch
+      colors: list - A list of colors used for each line on the plots
+      smooth: int - the level of smoothing used in the moving average function to smooth the data
+
+    Returns:
+      None
+    '''
+
+    # Create a subplot
     fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(12,6))
 
+    # For each file we must first read the data
     for index, (name, param) in enumerate(zip(names, params)):
         with open(name, 'rb') as data:
             train_acc_one = pickle.load(data)
@@ -54,19 +70,23 @@ def plot_results_twoClass(names, params, class_names, colors, smooth = 5):
             congestion_one = pickle.load(data)
             congestion_two = pickle.load(data)
 
-        ax[0,0].plot(moving_average(test_acc_one,smooth), color = colors[index], label='{}: {}'%(class_names[0],format(param)))
-        ax[0,0].plot(moving_average(test_acc_two,smooth), color = colors[index], linestyle='--', label='{}: {}'%(class_names[1],format(param)))
+        # Plot the accuracy, precision, recall and F-score in the corresponding subplot
+        # Each curve is smoothed to improve the readability of the graph
+        ax[0,0].plot(moving_average(test_acc_one,smooth), color = colors[index], label=class_names[0] + ': ' + param)
+        ax[0,0].plot(moving_average(test_acc_two,smooth), color = colors[index], linestyle='--', label=class_names[1] + ': ' + param)
         ax[0,0].set_title('Accuracies \n(moving average of over {} epochs)'.format(smooth))
-        ax[0,1].plot(moving_average(test_P_one,smooth), colors[index], label='{}: {}'%(class_names[0],format(param)))
-        ax[0,1].plot(moving_average(test_P_two,smooth), colors[index], linestyle='--', label='{}: {}'%(class_names[1],format(param)))
+        ax[0,1].plot(moving_average(test_P_one,smooth), colors[index], label=class_names[0] + ': ' + param)
+        ax[0,1].plot(moving_average(test_P_two,smooth), colors[index], linestyle='--', label=class_names[1] + ': ' + param)
         ax[0,1].set_title('Precision \n(moving average of over {} epochs)'.format(smooth))
-        ax[1,0].plot(moving_average(test_R_one,smooth), colors[index], label='{}: {}'%(class_names[0],format(param)))
-        ax[1,0].plot(moving_average(test_R_two,smooth), colors[index], linestyle='--', label='{}: {}'%(class_names[1],format(param)))
+        ax[1,0].plot(moving_average(test_R_one,smooth), colors[index], label=class_names[0] + ': ' + param)
+        ax[1,0].plot(moving_average(test_R_two,smooth), colors[index], linestyle='--', label=class_names[1] + ': ' + param)
         ax[1,0].set_title('Recall \n(moving average of over {} epochs)'.format(smooth))
-        ax[1,1].plot(moving_average(test_F_one,smooth), colors[index], label='{}: {}'%(class_names[0],format(param)))
-        ax[1,1].plot(moving_average(test_F_two,smooth), colors[index], linestyle='--', label='{}: {}'%(class_names[1],format(param)))
+        ax[1,1].plot(moving_average(test_F_one,smooth), colors[index], label=class_names[0] + ': ' + param)
+        ax[1,1].plot(moving_average(test_F_two,smooth), colors[index], linestyle='--', label=class_names[0] + ': ' + param)
         ax[1,1].set_title('F-Score \n(moving average of over {} epochs)'.format(smooth))
 
+        # If there are only two files read then vertical lines are added at each epoch where a congestion event occurs
+        # Lines are not added if more files are read as the lines would not be interpretable here
         if len(names) == 2:
             for i, val in enumerate(congestion_one):
                 if val == 1:
@@ -81,6 +101,7 @@ def plot_results_twoClass(names, params, class_names, colors, smooth = 5):
                     ax[1,0].axvline(x=i, color=colors[index], linestyle='--', linewidth=0.5)
                     ax[1,1].axvline(x=i, color=colors[index], linestyle='--', linewidth=0.5)
 
+        # Formatting of plots
         fig.text(0.4, 0.04, 'Epoch', ha='center', va='center')
         fig.text(0.06, 0.5, '%', ha='center', va='center', rotation='vertical')
         
@@ -99,8 +120,25 @@ def plot_results_twoClass(names, params, class_names, colors, smooth = 5):
 
 def plot_results_diff_twoClass(names, params, colors, smooth = 5):
 
+    '''
+    A function to plot the difference in performance metrics for the trained model using
+    the congestion avoidance scheduler with the model without the congestion avoidance scheduler.
+
+    Inputs:
+      names: list - The list of names of files to be read
+      params: list - the list of parameters used in each file, will be used to create a legend
+      class_names: list - the list of image classes learned by each model branch
+      colors: list - A list of colors used for each line on the plots
+      smooth: int - the level of smoothing used in the moving average function to smooth the data
+
+    Returns:
+      None
+    '''
+
+    # Create a subplot
     fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(12,6))
 
+    # For each file read in the data
     for index, (name, param) in enumerate(zip(names, params)):
         with open(name, 'rb') as data:
             train_acc_one = pickle.load(data)
@@ -122,11 +160,13 @@ def plot_results_diff_twoClass(names, params, colors, smooth = 5):
             congestion_one = pickle.load(data)
             congestion_two = pickle.load(data)
 
+        # Calculate the difference in the metrics on the two model branches
         acc_diff = [dog - cat for cat, dog in zip(test_acc_one, test_acc_two)]
         precision_diff = [dog - cat for cat, dog in zip(test_P_one, test_P_two)]
         recall_diff = [dog - cat for cat, dog in zip(test_R_one, test_R_two)]
         fScore_diff = [dog - cat for cat, dog in zip(test_F_one, test_F_two)]
 
+        # Plot the smoothed differences in the repsective subplots
         ax[0,0].plot(moving_average(acc_diff,smooth), color = colors[index], label='{}'.format(param))
         ax[0,0].plot([0]*len(moving_average(acc_diff,smooth)), color='grey', linestyle='--')
         ax[0,0].set_title('Difference in accuracies \n(moving average of over {} epochs)'.format(smooth))
@@ -143,6 +183,8 @@ def plot_results_diff_twoClass(names, params, colors, smooth = 5):
         ax[1,1].plot([0]*len(moving_average(fScore_diff,smooth)), color='grey', linestyle='--')
         ax[1,1].set_title('Difference in F-Score \n(moving average of over {} epochs)'.format(smooth))
         
+        # Add vertical lines at the epochs where a congestion event occurs
+        # This is only done if two files are read in otherwise the lines cannot be interpreted
         if len(names) == 2:
             for i, val in enumerate(congestion_one):
                 if val == 1:
@@ -157,7 +199,7 @@ def plot_results_diff_twoClass(names, params, colors, smooth = 5):
                     ax[1,0].axvline(x=i, color=colors[index], linestyle='--', linewidth=0.5)
                     ax[1,1].axvline(x=i, color=colors[index], linestyle='--', linewidth=0.5)
 
-
+        # Plot formatting
         fig.text(0.4, 0.04, 'Epoch', ha='center', va='center')
         fig.text(0.06, 0.5, '%', ha='center', va='center', rotation='vertical')
 
@@ -174,7 +216,7 @@ def plot_results_diff_twoClass(names, params, colors, smooth = 5):
     plt.show()
 
 
-def plot_results_multiClass(name, colors, smooth = 5, vlines=True):
+def plot_results_multiClass(name, colors, smooth = 5, vlines=True, ignore_classes = None):
 
     '''
     A function to plot the performance metrics of the trained model for each class of images on the test data
@@ -218,9 +260,12 @@ def plot_results_multiClass(name, colors, smooth = 5, vlines=True):
     
     # For each class of images plot the smoothed precision, recall & F-score in the corresponding subplot
     for cls in range(cls_num):
-        ax[0,1].plot(moving_average(test_P[:,cls],smooth), color = colors[cls], label='Class {}: {}'.format(cls,idx_to_class[cls]))
-        ax[1,0].plot(moving_average(test_R[:,cls],smooth), color = colors[cls], label='Class {}: {}'.format(cls,idx_to_class[cls]))
-        ax[1,1].plot(moving_average(test_F[:,cls],smooth), color = colors[cls], label='Class {}: {}'.format(cls,idx_to_class[cls]))
+        if ignore_classes is not None and cls in ignore_classes:
+            continue
+        else:
+            ax[0,1].plot(moving_average(test_P[:,cls],smooth), color = colors[cls], label='Class {}: {}'.format(cls,idx_to_class[cls]))
+            ax[1,0].plot(moving_average(test_R[:,cls],smooth), color = colors[cls], label='Class {}: {}'.format(cls,idx_to_class[cls]))
+            ax[1,1].plot(moving_average(test_F[:,cls],smooth), color = colors[cls], label='Class {}: {}'.format(cls,idx_to_class[cls]))
     
     # If a congestion event has happened in that epoch then a vertical line is added to the graph at that epoch
     cong_events = np.sum(cong_events,1)
@@ -248,7 +293,7 @@ def plot_results_multiClass(name, colors, smooth = 5, vlines=True):
     plt.show()
 
 
-def plot_results_diff_multiClass(baseline, name, colors, smooth = 5, vlines=True):
+def plot_results_diff_multiClass(baseline, name, colors, smooth = 5, vlines=True, ignore_classes = None):
 
     '''
     A function to plot the difference in performance metrics for the trained model using
@@ -306,12 +351,15 @@ def plot_results_diff_multiClass(baseline, name, colors, smooth = 5, vlines=True
     
     # For each class plot the change in recall, precision and F-score
     for cls in range(cls_num):
-        test_P_diff = test_P[:,cls] - base_test_P[:,cls]
-        test_R_diff = test_R[:,cls] - base_test_R[:,cls]
-        test_F_diff = test_F[:,cls] - base_test_F[:,cls]
-        ax[0,1].plot(moving_average(test_P_diff,smooth), color = colors[cls], label='Class {}: {}'.format(cls,idx_to_class[cls]))
-        ax[1,0].plot(moving_average(test_R_diff,smooth), color = colors[cls], label='Class {}: {}'.format(cls,idx_to_class[cls]))
-        ax[1,1].plot(moving_average(test_F_diff,smooth), color = colors[cls], label='Class {}: {}'.format(cls,idx_to_class[cls]))
+        if ignore_classes is not None and cls in ignore_classes:
+            continue
+        else:
+            test_P_diff = test_P[:,cls] - base_test_P[:,cls]
+            test_R_diff = test_R[:,cls] - base_test_R[:,cls]
+            test_F_diff = test_F[:,cls] - base_test_F[:,cls]
+            ax[0,1].plot(moving_average(test_P_diff,smooth), color = colors[cls], label='Class {}: {}'.format(cls,idx_to_class[cls]))
+            ax[1,0].plot(moving_average(test_R_diff,smooth), color = colors[cls], label='Class {}: {}'.format(cls,idx_to_class[cls]))
+            ax[1,1].plot(moving_average(test_F_diff,smooth), color = colors[cls], label='Class {}: {}'.format(cls,idx_to_class[cls]))
     
     # Add a vertical line to the subplots in each epoch that a congestion event occurs
     cong_events = np.sum(cong_events,1)

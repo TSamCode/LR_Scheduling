@@ -24,7 +24,7 @@ def linear_cong_condition(min_cond, max_cond, epoch, max_epochs):
     return condition
 
 
-def congestion_avoid(model, optimizer, branch1_metric, branch2_metric, condition, branch_one_grads, branch_two_grads, min_epochs, mult):
+def congestion_avoid(model, optimizer, branch1_metric, branch2_metric, condition, branch_one_grads, branch_two_grads, min_epochs, mult, epoch_count_one, epoch_count_two):
 
     '''
     A function to determine if a congestion event has occurred.
@@ -51,12 +51,10 @@ def congestion_avoid(model, optimizer, branch1_metric, branch2_metric, condition
         branch_two_grads: dict - The accumulated acquired knowledge on branch two after any knowledge has been returned due to congestion
     '''
 
-    global epoch_count_one
-    global epoch_count_two
-
     boolean_one = False
     boolean_two = False
 
+    # Determine if a congestion event has occurred on either network branch
     branch1_cond = (branch1_metric < condition * branch2_metric) and (epoch_count_two >= min_epochs)
     branch2_cond = (branch2_metric < condition * branch1_metric) and (epoch_count_one >= min_epochs)
 
@@ -85,65 +83,10 @@ def congestion_avoid(model, optimizer, branch1_metric, branch2_metric, condition
     else:
         print('No condition is met ..... {:.2f}%'.format(100.*condition))
 
-    return optimizer, model, boolean_one, boolean_two, branch_one_grads, branch_two_grads
+    return optimizer, model, boolean_one, boolean_two, branch_one_grads, branch_two_grads, epoch_count_one, epoch_count_two
 
 
-def congestion_avoid_10classes(cls_num, model, optimizer, metrics, condition, grads, min_epochs, mult, epoch_counts, boolean_values, num_class_avg):
-
-    '''
-    A function to determine if a congestion event has occurred.
-    When a congestion event occurs the parameters of the model must 
-    return a proportion of acquired knowledge. The dictionaries containing
-    the acquired knowledge are updated to reflect the 'lost' knowledge.
-
-    Inputs:
-        cls_num: int - The number of classes of images being classified
-        model: The PyTorch ResNet18 model being trained
-        metrics: list - The values of metrics for each class in the mult-class classifier using the test data
-        condition: float - The congestion condition parameter value
-        grads: dict - Accumulated acquired knowledge for each model parameter due to images in each class
-        min_epochs: int - The minimum number of epochs that must pass between successive congestion events on a model branch
-        mult: float - The proportion of acquired knowledge to be returned on congestion
-        epoch_counts: list - The number of epochs since the last congestion event for each class of images
-        boolean_values: list of boolean values - True at index 'cls' if a congestion event occurs for class 'cls'
-        num_class_avg: int - The number of metrics used to determine a congestion threshold value
-
-    Returns:
-        optimizer: 
-        model: The ResNet18 model being trained after parameter values have returned knowledge as required
-        boolean_values: boolean - Has a congestion event occurred for each class of images
-        epoch_counts: list - The number of epochs since the last congestion event for each class of images
-        grads: dict - The accumulated acquired knowledge due to each class of images after any knowledge has been returned due to congestion
-    '''
-
-    # Create a threshold which is the average metric from a given number of the worst performing classes in that epoch
-    threshold = np.average(np.sort(metrics)[:num_class_avg])
-
-    for cls in range(cls_num):
-        # Obtain the value of the metric for that class of images
-        metric = metrics[cls]
-        # A congestion occurs for that class if the threshold is lower than the metric multiplied by the congestion condition parameter
-        # At least min_epochs number of epochs must have passed since the last congestion event
-        if (threshold < condition * metric) and (epoch_counts[cls] >= min_epochs):
-            boolean_values[cls] = True
-            print('Condition has been met (class {}) ..... {:.2f}% --> {:.2f}%'.format(cls,100.*threshold, 100.*metric))
-            for name, value in model.named_parameters():
-                with torch.no_grad():
-                    if name in grads[cls].keys(): #and (('layer4' in str(name)) or ('fc' in str(name))):
-                            # On congestion the model parameters must return acquired knowledge
-                            # The acquired knowledge dictionary is updated to reflect the reduced remaining knowledge
-                            value += mult * grads[cls][name]
-                            grads[cls][name] -= mult * grads[cls][name]
-                            print('Gradient used: ', name)
-            epoch_counts[cls] = 0
-    
-        else:
-            print('Condition not met (class {}) ..... {:.2f}% --> {:.2f}%'.format(cls,100.*threshold, 100.*metric))
-
-    return optimizer, model, boolean_values, epoch_counts, grads
-
-
-def congestion_avoid_10classes_cosine(cls_num, model, optimizer, metrics, condition, grads, min_epochs, mult, epoch_counts, boolean_values, num_class_avg, similarity_threshold):
+def congestion_avoid_10classes(cls_num, model, optimizer, metrics, condition, grads, min_epochs, mult, epoch_counts, boolean_values, num_class_avg, similarity_threshold):
 
     '''
     A function to determine if a congestion event has occurred.

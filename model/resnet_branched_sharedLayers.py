@@ -85,7 +85,10 @@ class ResNetSplitShared(nn.Module):
 
     def _make_shared_layer(self, block: Type[Union[BasicBlock, Bottleneck]], planes: int, blocks: int,
                     stride: int = 1, dilate: bool = False) -> nn.Sequential:
-        
+        '''
+        A function to create a shared layer of the network
+        '''
+
         norm_layer = self._norm_layer
         downsample = None
         previous_dilation = self.dilation
@@ -116,7 +119,10 @@ class ResNetSplitShared(nn.Module):
 
     def _make_branch1_layer(self, block: Type[Union[BasicBlock, Bottleneck]], planes: int, blocks: int,
                     stride: int = 1, dilate: bool = False) -> nn.Sequential:
-        
+        '''
+        A function to create a layer of the network for branch one
+        '''
+
         norm_layer = self._norm_layer
         downsample = None
         previous_dilation = self.dilation
@@ -147,7 +153,10 @@ class ResNetSplitShared(nn.Module):
 
     def _make_branch2_layer(self, block: Type[Union[BasicBlock, Bottleneck]], planes: int, blocks: int,
                     stride: int = 1, dilate: bool = False) -> nn.Sequential:
-        
+        '''
+        A function to create a layer of the network for branch two
+        '''
+
         norm_layer = self._norm_layer
         downsample = None
         previous_dilation = self.dilation
@@ -199,6 +208,10 @@ class ResNetSplitShared(nn.Module):
 
 
     def _forward_shared_branch(self, x:Tensor) -> Tensor:
+        '''
+        A function to perform the forward pass through the shared layers of the network
+        '''
+
         out = self.conv1(x)
         out = self.bn1(out)
         out = self.relu(out)
@@ -210,6 +223,11 @@ class ResNetSplitShared(nn.Module):
 
 
     def _forward_branch_1(self, shared_out: Tensor) -> Tensor:
+        '''
+        A function to perform the forward pass through the 
+        layers of the network found only in branch one
+        '''
+
         branch1_out = self.branch1layer3(shared_out)
         branch1_out = self.branch1layer4(branch1_out)
         branch1_out = self.avgpool(branch1_out)
@@ -220,6 +238,11 @@ class ResNetSplitShared(nn.Module):
 
 
     def _forward_branch_2(self, shared_out: Tensor) -> Tensor:
+        '''
+        A function to perform the forward pass through the 
+        layers of the network found only in branch two
+        '''
+
         branch2_out = self.branch2layer3(shared_out)
         branch2_out = self.branch2layer4(branch2_out)
         branch2_out = self.avgpool(branch2_out)
@@ -230,6 +253,10 @@ class ResNetSplitShared(nn.Module):
     
     
     def forward(self, x: Tensor) -> Tensor:
+        '''
+        A function to perform the complete forward pass through both branches of the network
+        '''
+
         shared = self._forward_shared_branch(x)
         branch_one_out = self._forward_branch_1(shared)
         branch_two_out = self._forward_branch_2(shared)
@@ -238,4 +265,8 @@ class ResNetSplitShared(nn.Module):
 
 
 def ResNetSplit18Shared():
+    '''
+    A function to create the ResNet18 model with two parallel branches
+    '''
+
     return ResNetSplitShared(BasicBlock, [2,2,2,2])

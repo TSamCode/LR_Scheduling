@@ -38,15 +38,19 @@ def get_branch_indices(targets, classes):
     Tensors containing the indices of input data to be passed to each branch of the network
   '''
 
+  # Create a list of indices that contain the 'background' images
+  # A background image is any images not in either of the two classes being learned
   bg = []
   indices = list(range(len(targets)))
   for index, target in enumerate(targets):
     if target not in classes:
       bg.append(index)
 
+  # Sample half of these indices to be passed to branch one, and the remainder to branch two
   branch_one_bg = random.sample(bg, int(len(bg) / 2))
   branch_two_bg = [x for x in bg if x not in branch_one_bg]
 
+  # Create the list of indices then passed to each branch
   branch_one_idx = [x for x in indices if x not in branch_two_bg]
   branch_two_idx = [x for x in indices if x not in branch_one_bg]
 
