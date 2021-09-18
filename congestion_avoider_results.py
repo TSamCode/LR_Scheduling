@@ -134,8 +134,32 @@ def get_cong_avoidance_results(branch_one_class=5, branch_two_class=9, class_siz
 
 def get_cong_avoidance_results_10classes(epochs=100, min_cond=0.5, max_cond = 0.5, mult=0.1, lr=0.1, min_epochs = 10, num_class_avg = 10, similarity_threshold = 0.2, metric='recall'):
 
-    '''Allow the congestion condition to change linearly over time '''
+    '''
+    A function to produce the results of training ResNet model 
+    using the congestion avoidance scheduler for the long tailed CIFAR-10 data.
 
+    Inputs:
+        epochs: int - the number of epochs the model is trained for
+        min_cond: float - the lower bound of the congestion condition parameter that will be interpolated between
+        max_cond: float - the upper bound of the congestion condition parameter that will be interpolated between
+        mult: float - the multiplicative decrease factor that determines the proportion of knowledge returned
+        lr: float - The initial learning rate
+        min_epochs: int - the minimum number of epochs that must pass between successive congestion events
+        num_class_avg: int - the number of classes used to defined the congestion threshold value
+        similarity_threshold: float - the threshold of cosine similarity
+        metric: ['recall','precision','F-score'] - parameter to determine which metric is used to determine a congestion event
+    
+    Returns:
+        train_acc: numpy array - The list of training accuracy in each epoch
+        train_P: numpy array - The list of training precisions for each image class in each epoch
+        train_R: numpy array - The list of training recalls for each image class in each epoch
+        train_F: numpy array - The list of training F-scores for each image class in each epoch
+        test_acc: numpy array - The list of accuracies on test data in each epoch
+        test_P: numpy array - The list of precisions on test data for each image class in each epoch
+        test_R: numpy array - The list of recalls on test data for each image class in each epoch
+        test_F: numpy array - The list of F-scores on test data for each image class in each epoch
+        cong_events: numpy array - indicator to show which class has a congestion event in each epoch
+    '''
     # Create ResNet model
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     model = ResNet18(num_classes=10)
