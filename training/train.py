@@ -12,7 +12,7 @@ def train_congestion_avoider(trainloader, device, model, optimizer, branch_one_c
     A function to train the branched version of the ResNet model learning to classify two image classes.
 
     Inputs:
-        trainloader: The PyTroch data loader for training data
+        trainloader: The PyTorch data loader for training data
         device: string - The device the code is being run on
         model: The PyTorch branched ResNet model being trained
         optimizer: The model optimizer
